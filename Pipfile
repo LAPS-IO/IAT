@@ -11,6 +11,7 @@ pillow = "*"
 dash = "*"
 dash-html-components = "*"
 matplotlib = "*"
+scikit-learn = "*"
 
 [dev-packages]
 
