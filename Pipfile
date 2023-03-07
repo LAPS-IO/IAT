@@ -10,6 +10,7 @@ pandas-datareader = "*"
 pillow = "*"
 dash = "*"
 dash-html-components = "*"
+matplotlib = "*"
 
 [dev-packages]
 
