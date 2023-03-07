@@ -12,6 +12,7 @@ dash = "*"
 dash-html-components = "*"
 matplotlib = "*"
 scikit-learn = "*"
+werkzeug = "<=2.0.3"
 
 [dev-packages]
 
