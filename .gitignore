@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Assets
+main/assets
+!main/assets/.DS_Store
+!main/assets/custom.css
+!main/assets/list_classes.txt
