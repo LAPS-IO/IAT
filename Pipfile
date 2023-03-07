@@ -8,6 +8,8 @@ requests = "*"
 pandas = "*"
 pandas-datareader = "*"
 pillow = "*"
+dash = "*"
+dash-html-components = "*"
 
 [dev-packages]
 
