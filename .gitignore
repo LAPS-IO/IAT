@@ -133,3 +133,9 @@ main/assets
 !main/assets/.DS_Store
 !main/assets/custom.css
 !main/assets/list_classes.txt
+
+# projects
+main/projects
+
+# runners at root
+run_*
