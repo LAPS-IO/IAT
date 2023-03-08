@@ -21,11 +21,11 @@ def create_dir(path):
         mkdir(path)
 
 def get_projects_list():
-    
+
     projects_folder = join(getcwd(), 'projects')
     projects_list = [f for f in listdir(projects_folder) if isdir(join(projects_folder, f))]
     assets_folder = join(getcwd(), 'assets')
-    projects_assets_list = [f for f in listdir(assets_folder) if isdir(join(assets_folder, f))]    
+    projects_assets_list = [f for f in listdir(assets_folder) if isdir(join(assets_folder, f))]
 
     projects_list.extend(x for x in projects_assets_list if x not in projects_list)
     projects_list.sort()
@@ -80,7 +80,7 @@ def move_batch_location(batch_name, origin = 'projects', destiny = 'assets'):
     origin_folder = join(getcwd(), origin)
     destiny_folder = join(getcwd(), destiny)
     create_dir(destiny_folder)
-    
+
     origin_project_folder = join(origin_folder, loaded_project)
     destiny_project_folder = join(destiny_folder, loaded_project)
     create_dir(destiny_project_folder)
@@ -116,12 +116,12 @@ def load_dataframe(batch_name):
     if not exists(assets_project_folder):
         to_move = True
     # if assets > dataframes does not exist or the file is not there
-    assets_dataframes_folder = join(getcwd(), 'assets', loaded_project, 'dataframes') 
+    assets_dataframes_folder = join(getcwd(), 'assets', loaded_project, 'dataframes')
     if not exists(assets_dataframes_folder) or batch_name not in listdir(assets_dataframes_folder):
         to_move = True
 
-    finished_dataframes_folder = join(getcwd(), 'finished_projects', loaded_project, 'dataframes') 
-    
+    finished_dataframes_folder = join(getcwd(), 'finished_projects', loaded_project, 'dataframes')
+
     if exists(finished_dataframes_folder) and batch_name in listdir(finished_dataframes_folder):
         origin = 'finished_projects'
 
@@ -177,16 +177,16 @@ def save_csv():
 
     dataframe_path = join(getcwd(), 'assets', loaded_project, 'dataframes', loaded_batch)
     print('   ', dataframe_path)
-    
+
     df.to_csv(dataframe_path, index=False)
-    
+
     backup_folder = join(getcwd(), 'assets', loaded_project, 'dataframes', 'backups')
     if not exists(backup_folder):
         mkdir(backup_folder)
     backup_path = join(backup_folder, loaded_batch[:-4] + '_bkp' + str(date.today()) + '.csv')
 
     print('   ', backup_path)
-    
+
     df.to_csv(backup_path, index=False)
 
 def get_marked_images(imageselector_images):
@@ -218,7 +218,7 @@ app = dash.Dash(
 
 app.layout = html.Div([
     html.Datalist(
-        id='datalist_suggested_classes', 
+        id='datalist_suggested_classes',
         children=[html.Option(value=name) for name in suggested_classes]
     ),
 
@@ -234,40 +234,40 @@ app.layout = html.Div([
                 dbc.Row(dbc.Col(html.P('', id='p_batch_name'), width={'size': 11}))
             ], width={'size': 11}),
         ])
-    ,style={'max-width': '100%'},),
+        ,style={'max-width': '100%'},),
 
     dbc.Row(html.Hr()),
 
     dbc.Container(
-        dbc.Row([   
+        dbc.Row([
             dbc.Col([
                 dbc.Row([
                     dbc.Col(
                         html.Div(
-                            html.P('Opacity'),    
-                        style={'textAlign': 'left'}), width={'size': 2}),
+                            html.P('Opacity'),
+                            style={'textAlign': 'left'}), width={'size': 2}),
                     dbc.Col([
                         dcc.Slider(0, 1, 0.1,
-                            value=0,
-                            id='slider_map_opacity',
-                            marks=None,
-                            tooltip={"placement": "bottom", "always_visible": True},
-                        )], width={'size': 3}),
+                                   value=0,
+                                   id='slider_map_opacity',
+                                   marks=None,
+                                   tooltip={"placement": "bottom", "always_visible": True},
+                                   )], width={'size': 3}),
                     dbc.Col(
                         html.Div(
-                            html.P('Marker size'),    
-                        style={'textAlign': 'right'})
-                    , width={'size': 2}),
+                            html.P('Marker size'),
+                            style={'textAlign': 'right'})
+                        , width={'size': 2}),
                     dbc.Col([
                         dcc.Slider(1, 25, 3,
-                            value=10,
-                            id='slider_marker_size',
-                            marks=None,
-                            tooltip={"placement": "bottom", "always_visible": True},
-                        )], width={'size': 3}),
+                                   value=10,
+                                   id='slider_marker_size',
+                                   marks=None,
+                                   tooltip={"placement": "bottom", "always_visible": True},
+                                   )], width={'size': 3}),
                     dbc.Col(
                         dcc.Dropdown(['A-Z, a-z', 'Frequency'], value='A-Z, a-z', id='dropdown_order_labels', clearable = False)
-                    , width={'size': 2}),
+                        , width={'size': 2}),
                 ], align='bottom'),
                 dcc.Graph(id="graph_scatterplot", figure={}, style={"height": "64vh"}, config={'displaylogo':False, 'modeBarButtonsToRemove': ['toImage', 'resetScale2d']}),
                 dcc.Graph(id="graph_histogram", figure={}, style={'height': '18vh', 'margin-top': '1vh'}, config={'displaylogo':False, 'modeBarButtonsToRemove': ['toImage', 'resetScale2d']} ),
@@ -286,18 +286,18 @@ app.layout = html.Div([
                             style={'width': '100%', 'background':'Floralwhite'},
                             list = 'datalist_suggested_classes'
                         )
-                    , width = 8),
+                        , width = 8),
                     dbc.Col(
                         dbc.Button('Label', n_clicks=0, id='button_label', style={'background':'chocolate', 'width':'100%'}),
-                    width=4)
+                        width=4)
                 ]),
                 dbc.Row([dbc.Col(html.Hr()),],),
 
                 dbc.Row(
                     html.Div(imageselector.ImageSelector(id='div_image_selector', images=empty_list_dics,
-                        galleryHeaderStyle = {'position': 'sticky', 'top': 0, 'height': '0px', 'background': "#000000", 'zIndex': -1},),
-                        id='XXXXXXXXXX', style=dict(height='68vh',overflow='scroll', backgroundColor=background_color)
-                    )
+                                                         galleryHeaderStyle = {'position': 'sticky', 'top': 0, 'height': '0px', 'background': "#000000", 'zIndex': -1},),
+                             id='XXXXXXXXXX', style=dict(height='68vh',overflow='scroll', backgroundColor=background_color)
+                             )
                 )
             ], width=True),
         ])
@@ -419,7 +419,7 @@ def load_batch(nclicks, opacity, marker_size, order_by, label_nclicks, reset_gra
             save_csv()
         if len(check_discard) > 0:
             prev_selection = None
-    
+
     fig = load_scatterplot(df, opacity, marker_size, order_by, prev_selection)
 
     return fig, prev_selection, 'Loaded: ' + loaded_project + ' > ' + loaded_batch , nclicks
@@ -464,7 +464,7 @@ def update_image_selector(selected_data):
         list_paths = [join(images_path, f) for f in filtered_df['names']]
         list_labels = filtered_df['manual_label'].tolist()
         list_captions = ['id: ' + str(id) + ' (' + label + ') - ' + name \
-            for id, label, name in zip(selected_points_ids, list_labels, list_paths)]
+                         for id, label, name in zip(selected_points_ids, list_labels, list_paths)]
         size = len(list_paths)
         print('Update image selector', size)
 
@@ -498,10 +498,10 @@ def update_image_selector(selected_data):
 )
 def finish_batch(nclicks, reload):
     global loaded_batch
-    
+
     if nclicks > 0:
         move_batch_location(loaded_batch, origin='assets', destiny='finished_projects')
-        return reload+1 
+        return reload+1
     return reload
 
 port = 8020
