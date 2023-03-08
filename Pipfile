@@ -12,8 +12,8 @@ dash = "*"
 dash-html-components = "*"
 matplotlib = "*"
 scikit-learn = "*"
-werkzeug = "<=2.0.3"
-flask = "<=2.1.3"
+werkzeug = "*"
+flask = "*"
 dash-bootstrap-components = "*"
 
 [dev-packages]
