@@ -99,10 +99,6 @@ def move_batch_location(batch_name, origin = 'projects', destiny = 'assets'):
     create_dir(images_folder)
     move(join(origin_project_folder, 'images', batch_basename), join(images_folder, batch_basename))
 
-    if 'thumbnails' in listdir(origin_project_folder):
-        thumbnails_folder = join(destiny_project_folder, 'thumbnails')
-        create_dir(thumbnails_folder)
-        move(join(origin_project_folder, 'thumbnails', batch_basename), join(thumbnails_folder, batch_basename))
 
 def load_dataframe(batch_name):
     global loaded_project, loaded_batch
@@ -227,14 +223,32 @@ app.layout = html.Div([
             dbc.Col(html.H1('ILT'), width={'size': 1}),
             dbc.Col([
                 dbc.Row([
-                    dbc.Col(dcc.Dropdown(projects_list, '', placeholder='Select a project', id='dropdown_project', clearable=False), width={'size': 4}),
-                    dbc.Col(dcc.Dropdown([], '', placeholder='Select a batch', id='dropdown_batch', clearable=False, style={'display': 'none'}), width={'size': 6}),
-                    dbc.Col(dbc.Button('Load batch', n_clicks=0, id='button_load_batch', style={'background':'chocolate', 'width':'100%', 'display': 'none'}), width={'size': 2})
+                    dbc.Col(dcc.Dropdown(projects_list, '',
+                                         placeholder='Select a project',
+                                         id='dropdown_project',
+                                         clearable=False),
+                            width={'size': 4}),
+                    dbc.Col(dcc.Dropdown([], '',
+                                         placeholder='Select a batch',
+                                         id='dropdown_batch',
+                                         clearable=False,
+                                         style={'display': 'none'}),
+                            width={'size': 6}),
+                    dbc.Col(dbc.Button('Load batch',
+                                       n_clicks=0,
+                                       id='button_load_batch',
+                                       style={'background':'chocolate',
+                                              'width':'100%',
+                                              'display': 'none'}),
+                            width={'size': 2})
                 ]),
-                dbc.Row(dbc.Col(html.P('', id='p_batch_name'), width={'size': 11}))
-            ], width={'size': 11}),
-        ])
-        ,style={'max-width': '100%'},),
+                dbc.Row(
+                    dbc.Col(html.P('', id='p_batch_name'), width={'size': 11})
+                )], width={'size': 11}
+            ),
+        ]),
+        style={'max-width': '100%'},
+    ),
 
     dbc.Row(html.Hr()),
 
@@ -256,10 +270,10 @@ app.layout = html.Div([
                     dbc.Col(
                         html.Div(
                             html.P('Marker size'),
-                            style={'textAlign': 'right'})
-                        , width={'size': 2}),
+                            style={'textAlign': 'right'}),
+                        width={'size': 2}),
                     dbc.Col([
-                        dcc.Slider(1, 25, 3,
+                        dcc.Slider(1, 25, 1,
                                    value=10,
                                    id='slider_marker_size',
                                    marks=None,
@@ -437,7 +451,9 @@ def update_image_selector(selected_data):
     global loaded_project, loaded_batch
 
     print('entering update image selector')
-    if selected_data is not None:
+    if selected_data is None:
+        print('Update image selector = None')
+    else:
         selected_points_ids = [c['customdata'] for c in selected_data['points']]
         filtered_df = df.loc[df['custom_data'].isin(selected_points_ids)]
 
@@ -452,26 +468,15 @@ def update_image_selector(selected_data):
         in_folder = listdir(images_full_path)[0]
         images_path = join('assets', loaded_project, 'images', batch_basename, in_folder)
         list_paths = [join(images_path, f) for f in filtered_df['names']]
-
-        thumbnails_full_path = join(getcwd(), 'assets', loaded_project, 'thumbnails')
-        if exists(thumbnails_full_path):
-            thumbnails_path = join('assets', loaded_project, 'thumbnails', batch_basename, in_folder)
-            list_thumbs = [join(thumbnails_path, f) for f in filtered_df['thumbnails']]
-        else:
-            thumbnails_path = images_path
-            list_thumbs = list_paths
-
-        list_paths = [join(images_path, f) for f in filtered_df['names']]
         list_labels = filtered_df['manual_label'].tolist()
         list_captions = ['id: ' + str(id) + ' (' + label + ') - ' + name \
                          for id, label, name in zip(selected_points_ids, list_labels, list_paths)]
         size = len(list_paths)
-        print('Update image selector', size)
-
+        print('Update image selector', size, in_folder)
 
         list_dics = create_list_dics(
             _list_src=list_paths,
-            _list_thumbnail=list_thumbs,
+            _list_thumbnail=list_paths,
             _list_name_figure=filtered_df['names'].tolist(),
             _list_thumbnailWidth=[10]*size,
             _list_thumbnailHeight=[10]*size,
@@ -483,7 +488,6 @@ def update_image_selector(selected_data):
         )
 
         return fig_histogram, list_dics
-    print('Update image selector = None')
 
     return {}, []
 
