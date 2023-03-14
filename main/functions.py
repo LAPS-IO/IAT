@@ -58,7 +58,7 @@ def create_list_dics(
     _list_caption=None,
     _list_thumbnailCaption=None,
     _list_tags=None):
-    
+
     _data = {
       'src': _list_src,
       'thumbnail': _list_thumbnail,
