@@ -161,12 +161,13 @@ def load_scatterplot(df, opacity, marker_size, order_by, prev_selection,
 
     return fig
 
-def update_labels(marked_images, new_label):
+def update_labels(marked_images, new_label, color_number):
     global df
 
     if new_label != '' and len(marked_images) > 0:
         rows = df.index[df['custom_data'].isin(marked_images)]
         df.loc[rows, 'manual_label'] = new_label
+        df.loc[rows, 'colors'] = color_number
 
 def save_csv():
     global df, loaded_project, loaded_batch
@@ -203,7 +204,7 @@ suggested_classes = read_list_classes()
 
 default_features = ['A-Z, a-z', 'Similarity']
 order_images_vals = ''
-features = ['Image State (T/F)', 'SegmentationMethod', 'Area (pxl)', 'Image Width (pxl)', 'Image Size (pxl)', 'circularity',
+manual_features = ['Image State (T/F)', 'SegmentationMethod', 'Area (pxl)', 'Image Width (pxl)', 'Image Size (pxl)', 'circularity',
             'Elongation', 'Rectangularity', 'Mean Intensity', 'Median Intensity', 'Contrast', 'Solidity']
 options_images = []
 
@@ -431,7 +432,7 @@ def update_dropdown_batch(batch_name):
 )
 def load_batch(nclicks, opacity, marker_size, order_by, label_nclicks, reset_graphs,
                batch_name, prev_nclicks, prev_selection, check_save, check_discard, new_label, imageselector_images):
-    global fig, df, order_images_vals, default_features, options_images
+    global fig, df, order_images_vals, default_features, manual_features, options_images
 
     print('entering load batch')
 
@@ -446,8 +447,13 @@ def load_batch(nclicks, opacity, marker_size, order_by, label_nclicks, reset_gra
 
         order_images_vals = default_features[0]
         
-        all_features = default_features
-        all_features.extend(features)
+        all_features = []
+        for f in default_features:
+            if f not in all_features:
+                all_features.append(f)
+        for f in manual_features:
+            if f in df and f not in all_features:
+                all_features.append(f)
         all_features.sort()
         for f in all_features:
             options_images.append({'label': f, 'value': f})
@@ -460,7 +466,8 @@ def load_batch(nclicks, opacity, marker_size, order_by, label_nclicks, reset_gra
         return fig, None, 'No batches loaded.', nclicks, [], ''
     elif flag_callback == 'button_label':
         marked_images = get_marked_images(imageselector_images)
-        update_labels(marked_images, new_label)
+        color_number = int(df['colors'].max())+ 1
+        update_labels(marked_images, new_label, color_number)
         if len(check_save) > 0:
             save_csv()
         if len(check_discard) > 0:
