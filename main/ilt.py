@@ -307,6 +307,18 @@ app.layout = html.Div([
                 ]),
                 dbc.Row([dbc.Col(html.Hr()),],),
 
+                dbc.Row([
+                    dbc.Col(
+                        dbc.Button('Invert marks', n_clicks=0, id='button_invert_marks', style={'background':'chocolate', 'width':'100%'}), width=4
+                    ),
+                    dbc.Col([
+                        dcc.Checklist([' Marked images first'], value = [' Marked images first'], id = 'check_marked first'),
+                        dcc.Checklist([' Hide relabeled images'], value = [' Hide relabeled images'], id = 'check_hide_relabeled')
+                    ], width = 6),
+                    dbc.Col(
+                        dcc.Dropdown(['A-Z, a-z', 'Similarity'], value='A-Z, a-z', id='dropdown_order_images', clearable = False), width={'size': 2})
+                ]),
+
                 dbc.Row(
                     html.Div(imageselector.ImageSelector(id='div_image_selector', images=empty_list_dics,
                                                          galleryHeaderStyle = {'position': 'sticky', 'top': 0, 'height': '0px', 'background': "#000000", 'zIndex': -1},),
@@ -446,16 +458,63 @@ def load_batch(nclicks, opacity, marker_size, order_by, label_nclicks, reset_gra
     Output('graph_histogram', 'figure'),
     Output('div_image_selector', 'images'),
     Input('graph_scatterplot', 'selectedData'),
+    Input('button_invert_marks', 'n_clicks'),
+    Input('check_marked first', 'value'),  
+    Input('check_hide_relabeled', 'value'),
+    Input('dropdown_order_images', 'value'),
+    State('div_image_selector', 'images'),
 )
-def update_image_selector(selected_data):
+def update_image_selector(selected_data, invert_marks, marked_first, hide_relabeled, order_images, imageselector_images):
     global loaded_project, loaded_batch
+
+    ctx = dash.callback_context
+    flag_callback = ctx.triggered[0]['prop_id'].split('.')[0]
+
 
     print('entering update image selector')
     if selected_data is None:
         print('Update image selector = None')
     else:
+        print('Callback', flag_callback)
+
         selected_points_ids = [c['customdata'] for c in selected_data['points']]
-        filtered_df = df.loc[df['custom_data'].isin(selected_points_ids)]
+        marked_points = []
+        if flag_callback != 'graph_scatterplot':
+            marked_points = [p['custom_data'] for p in imageselector_images if p['isSelected']]
+        print('marked points')
+        print(marked_points)
+
+        filtered_df = df.loc[df['custom_data'].isin(selected_points_ids)].copy()
+        
+        if marked_first or flag_callback == 'graph_scatterplot':
+            marked_df = filtered_df.loc[filtered_df['custom_data'].isin(marked_points)].copy()
+            marked_df['marked'] = [True] * marked_df.shape[0]
+            unmarked_df = filtered_df.loc[~filtered_df['custom_data'].isin(marked_points)].copy()
+            unmarked_df['marked'] = [False] * unmarked_df.shape[0]
+
+            if flag_callback == 'button_invert_marks':
+                filtered_df = pd.concat([unmarked_df, marked_df])
+                filtered_df['marked'] = filtered_df['marked'].astype(bool)
+            else:
+                filtered_df = pd.concat([marked_df, unmarked_df])            
+                filtered_df['marked'] = filtered_df['marked'].astype(bool)
+        else:
+            points = {p['custom_data']: p['isSelected'] for p in imageselector_images}
+            sorted_points = dict(sorted(points.items()))
+            print('Here')
+            print(sorted_points.values())
+
+            print('filtered_df before')
+            print(filtered_df)
+
+            filtered_df['marked'] = sorted_points.values()
+
+        if flag_callback == 'button_invert_marks':
+            filtered_df.loc[:, 'marked'] = ~filtered_df['marked']
+    
+        print('filtered_df after')
+        print(filtered_df)
+
 
         ### Histogram update
         fig_histogram = compute_histogram(filtered_df)
@@ -469,20 +528,24 @@ def update_image_selector(selected_data):
         images_path = join('assets', loaded_project, 'images', batch_basename, in_folder)
         list_paths = [join(images_path, f) for f in filtered_df['names']]
         list_labels = filtered_df['manual_label'].tolist()
+        list_marks = filtered_df['marked'].tolist()
+        list_ids = filtered_df['custom_data'].tolist()
+        list_names = filtered_df['names'].tolist()
+        
         list_captions = ['id: ' + str(id) + ' (' + label + ') - ' + name \
-                         for id, label, name in zip(selected_points_ids, list_labels, list_paths)]
+                         for id, label, name in zip(list_ids, list_labels, list_paths)]
         size = len(list_paths)
-        print('Update image selector', size, in_folder)
+        print('Update image selector', size, len(list_marks), in_folder)
 
         list_dics = create_list_dics(
             _list_src=list_paths,
             _list_thumbnail=list_paths,
-            _list_name_figure=filtered_df['names'].tolist(),
+            _list_name_figure=list_names,
             _list_thumbnailWidth=[10]*size,
             _list_thumbnailHeight=[10]*size,
-            _list_isSelected= [True]*size,
-            _list_custom_data=selected_points_ids,
-            _list_caption=list_labels,
+            _list_isSelected=list_marks,
+            _list_custom_data=list_ids,
+            _list_caption=list_captions,
             _list_thumbnailCaption=list_labels,
             _list_tags=[[]]*size
         )
