@@ -391,7 +391,7 @@ def update_dropdown_batch(project_name, reload):
                     }
                 )
 
-        return  {'display': 'block'}, options, '', 1
+        return  {'display': 'block'}, options, '', reload
     return {'display': 'none'}, [], '', 0
 
 """
