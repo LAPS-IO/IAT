@@ -363,9 +363,10 @@ app.layout = html.Div([
     Output('dropdown_batch', 'value'),
     Output('reset_graphs', 'data'),
     Input('dropdown_project', 'value'),
+    Input('button_finish_batch', 'n_clicks'),
 )
-def update_dropdown_batch(project_name):
-    global loaded_project
+def update_dropdown_batch(project_name, nclicks):
+    global loaded_project, load_batch
 
     print('entering update dropdown batch')
     ctx = dash.callback_context
@@ -373,10 +374,14 @@ def update_dropdown_batch(project_name):
 
     print('Callback:', flag_callback, project_name)
 
+    print('project: ', project_name, len(project_name))
+        
+    if flag_callback == 'button_finish_batch' and nclicks > 0:
+        move_batch_location(loaded_batch, origin='assets', destiny='finished_projects')
+    
     if len(project_name) > 0:
-        print(project_name)
         batches_list, batches_assets_list, batches_finished_list = get_batches_list(project_name)
-        if len(loaded_project) == 0:
+        if len(loaded_project) == 0 or flag_callback == 'button_finish_batch':
             reset_val = 1
         else:
             reset_val = 0
@@ -405,7 +410,8 @@ def update_dropdown_batch(project_name):
                 )
 
         return  {'display': 'block'}, options, '', reset_val
-    return {'display': 'none'}, [], '', 0
+    else:
+        return {'display': 'none'}, [], '', 0
 
 """
     Displays the button to load the batch
@@ -608,20 +614,6 @@ def update_image_selector(selected_data, invert_marks, marked_first, hide_relabe
         )
 
         return fig_histogram, list_dics
-
-"""
-    Finish batch, moving it to the finished_projects folder
-"""
-@app.callback(
-    Output('dummy', 'data'),
-    Input('button_finish_batch', 'n_clicks'),
-)
-def finish_batch(nclicks):
-    global loaded_batch
-
-    if nclicks > 0:
-        move_batch_location(loaded_batch, origin='assets', destiny='finished_projects')
-    return -1
 
 port = 8020
 opened = False
