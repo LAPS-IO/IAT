@@ -72,7 +72,7 @@ def move_batch_location(batch_name, origin = 'projects', destiny = 'assets'):
     global loaded_project
 
     print()
-    print('Moving from', origin, 'to', destiny)
+    print('Moving', batch_name, 'from', origin, 'to', destiny)
     print()
 
     batch_basename = get_batch_basename(loaded_project, batch_name)
@@ -319,8 +319,8 @@ app.layout = html.Div([
                         dbc.Button('Invert marks', n_clicks=0, id='button_invert_marks', style={'background':'chocolate', 'width':'100%'}), width=4
                     ),
                     dbc.Col([
-                        dcc.Checklist([' Marked images first'], value = [' Marked images first'], id = 'check_marked first'),
-                        dcc.Checklist([' Hide relabeled images'], value = [' Hide relabeled images'], id = 'check_hide_relabeled')
+                        dcc.Checklist([' Marked images first'], value = [], id = 'check_marked first'),
+                        dcc.Checklist([' Hide relabeled images'], value = [], id = 'check_hide_relabeled')
                     ], width = 4),
                     dbc.Col(
                         dcc.Dropdown(order_images_vals, 'A-Z, a-z',
@@ -344,9 +344,13 @@ app.layout = html.Div([
             dbc.Col(dbc.Button('Finish batch', n_clicks=0, id='button_finish_batch', style={'background':'chocolate', 'width':'100%'}), width={'size': 12})
         ]),
     ),
+    dcc.ConfirmDialog(
+        id='confirm_load_batch',
+        message='Do you really want to load the selected batch?',
+    ),
     dcc.Store(id='selected_points_ids', data=0),
     dcc.Store(id='button_load_batch_clicks', data=0),
-    dcc.Store(id='reload_batches', data=0),
+    dcc.Store(id='dummy', data=0),
     dcc.Store(id='reset_graphs', data=0),
 ])
 
@@ -359,15 +363,24 @@ app.layout = html.Div([
     Output('dropdown_batch', 'value'),
     Output('reset_graphs', 'data'),
     Input('dropdown_project', 'value'),
-    Input('reload_batches', 'data')
 )
-def update_dropdown_batch(project_name, reload):
+def update_dropdown_batch(project_name):
     global loaded_project
 
     print('entering update dropdown batch')
+    ctx = dash.callback_context
+    flag_callback = ctx.triggered[0]['prop_id'].split('.')[0]
 
-    if len(project_name) > 0 or reload > 0:
+    print('Callback:', flag_callback, project_name)
+
+    if len(project_name) > 0:
+        print(project_name)
         batches_list, batches_assets_list, batches_finished_list = get_batches_list(project_name)
+        if len(loaded_project) == 0:
+            reset_val = 1
+        else:
+            reset_val = 0
+
         loaded_project = project_name
 
         options = []
@@ -391,7 +404,7 @@ def update_dropdown_batch(project_name, reload):
                     }
                 )
 
-        return  {'display': 'block'}, options, '', reload
+        return  {'display': 'block'}, options, '', reset_val
     return {'display': 'none'}, [], '', 0
 
 """
@@ -406,6 +419,17 @@ def update_dropdown_batch(batch_name):
         return  {'display': 'block'}
     return {'display': 'none'}
 
+@app.callback(
+    Output('confirm_load_batch', 'displayed'),
+    Input('button_load_batch', 'n_clicks'),
+)
+def display_confirm(nclicks):
+    print('confirm nclicks', nclicks)
+    if nclicks > 0:
+        print('Returning true')
+        return True
+    return False
+
 """
     Loads the selected batch
 """
@@ -413,25 +437,24 @@ def update_dropdown_batch(batch_name):
     Output('graph_scatterplot', 'figure'),
     Output('graph_scatterplot', 'selectedData'),
     Output('p_batch_name', 'children'),
-    Output('button_load_batch_clicks', 'data'),
     Output('dropdown_order_images', 'options'),
     Output('dropdown_order_images', 'value'),
-    Input('button_load_batch', 'n_clicks'),
+    Input('confirm_load_batch', 'submit_n_clicks'),
     Input('slider_map_opacity', 'value'),
     Input('slider_marker_size', 'value'),
     Input('dropdown_order_labels', 'value'),
     Input('button_label', 'n_clicks'),
     Input('reset_graphs', 'data'),
     State('dropdown_batch', 'value'),
-    State('button_load_batch_clicks', 'data'),
+#    State('button_load_batch_clicks', 'data'),
     State('graph_scatterplot', 'selectedData'),
     State('check_save_csv', 'value'),
     State('check_discard_image', 'value'),
     State('input_label_images', 'value'),
     State('div_image_selector', 'images'),
 )
-def load_batch(nclicks, opacity, marker_size, order_by, label_nclicks, reset_graphs,
-               batch_name, prev_nclicks, prev_selection, check_save, check_discard, new_label, imageselector_images):
+def load_batch(confirm_load, opacity, marker_size, order_by, label_nclicks, reset_graphs,
+               batch_name, prev_selection, check_save, check_discard, new_label, imageselector_images):
     global fig, df, order_images_vals, default_features, manual_features, options_images
 
     print('entering load batch')
@@ -439,9 +462,9 @@ def load_batch(nclicks, opacity, marker_size, order_by, label_nclicks, reset_gra
     ctx = dash.callback_context
     flag_callback = ctx.triggered[0]['prop_id'].split('.')[0]
 
-    print(flag_callback, nclicks)
+    print(flag_callback, reset_graphs, confirm_load, len(batch_name))
 
-    if flag_callback == 'button_load_batch' and nclicks > prev_nclicks:
+    if confirm_load and len(batch_name) > 0:
         df = load_dataframe(batch_name)
         options_images = []
 
@@ -459,11 +482,11 @@ def load_batch(nclicks, opacity, marker_size, order_by, label_nclicks, reset_gra
             options_images.append({'label': f, 'value': f})
 
         prev_selection = None
-    elif len(flag_callback) < 1 or len(df.index) == 0 or flag_callback == 'reset_graphs': #page reloaded or df not loaded
+    elif len(flag_callback) < 1 or len(df.index) == 0 or (flag_callback == 'reset_graphs' and reset_graphs == 1): #page reloaded or df not loaded
         df = pd.DataFrame()
         fig = {}
 
-        return fig, None, 'No batches loaded.', nclicks, [], ''
+        return fig, None, 'No batches loaded.', [], ''
     elif flag_callback == 'button_label':
         marked_images = get_marked_images(imageselector_images)
         color_number = int(df['colors'].max())+ 1
@@ -479,7 +502,7 @@ def load_batch(nclicks, opacity, marker_size, order_by, label_nclicks, reset_gra
 
     fig = load_scatterplot(df, opacity, marker_size, order_by, prev_selection)
 
-    return fig, prev_selection, 'Loaded: ' + loaded_project + ' > ' + loaded_batch , nclicks, options_images, order_images_vals
+    return fig, prev_selection, 'Loaded: ' + loaded_project + ' > ' + loaded_batch , options_images, order_images_vals
 
 
 """
@@ -590,18 +613,15 @@ def update_image_selector(selected_data, invert_marks, marked_first, hide_relabe
     Finish batch, moving it to the finished_projects folder
 """
 @app.callback(
-    Output('reload_batches', 'data'),
+    Output('dummy', 'data'),
     Input('button_finish_batch', 'n_clicks'),
-    State('reload_batches', 'data'),
-
 )
-def finish_batch(nclicks, reload):
+def finish_batch(nclicks):
     global loaded_batch
 
     if nclicks > 0:
         move_batch_location(loaded_batch, origin='assets', destiny='finished_projects')
-        return reload+1
-    return reload
+    return -1
 
 port = 8020
 opened = False
