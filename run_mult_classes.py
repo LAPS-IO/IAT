@@ -18,7 +18,7 @@ def map_ids(images_path):
 
 def print_batches(dataframes_path, map_id_to_batch, project_name):
     for key in map_id_to_batch.keys():
-        csv_name = map_id_to_batch[key] + '_' + project_name
+        csv_name = map_id_to_batch[key] + '_' + project_name + '.csv'
         mod_time = getmtime(join(dataframes_path, csv_name))
         mod_date = strftime('%Y-%m-%d %H:%M:%S', localtime(mod_time))
 
@@ -35,7 +35,7 @@ def check_input(text, max_num):
 
 projects_path = 'main/assets/'
 
-project_name = 'rebocavel_dezembro'
+project_name = 'mult_classes'
 
 dataframes_path = 'main/assets/' + project_name + '/dataframes/'
 samples_path = 'main/assets/' + project_name + '/samples/'
