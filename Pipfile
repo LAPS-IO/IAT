@@ -15,6 +15,7 @@ scikit-learn = "*"
 werkzeug = "*"
 flask = "*"
 dash-bootstrap-components = "*"
+setuptools = "*"
 
 [dev-packages]
 
