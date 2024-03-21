@@ -40,7 +40,7 @@ def init(argv):
     """
     
     path_to_images = argv[1]
-    path_to_thumbnails = argv[2]
+    path_to_thumbnails = argv[1]
     csv_file = argv[3]
     graph_range = 80
     if len(argv) > 4:
