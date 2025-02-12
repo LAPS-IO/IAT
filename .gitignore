@@ -139,3 +139,6 @@ main/projects
 
 # runners at root
 run_*
+
+# pipenv lock file
+Pipfile.lock
