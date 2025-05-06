@@ -247,7 +247,7 @@ fig_paral =  f_figure_paralelas_coordenadas(
 
 ##############################################################################################################
 
-dropdown_image_vals = ['A-Z, a-z', 'Similarity']
+dropdown_image_vals = ['A-Z, a-z', 'Similarity', 'Probability']
 if df.shape[1] > 30: #> v0.3 
     dropdown_image_vals.extend( [
         'Image State (T/F)',
@@ -293,7 +293,7 @@ app.layout = html.Div([
 #                        , width={'size': 4}),
                         dbc.Col(
                             html.Div(
-                                html.P('Background opacity'),    
+                                html.P('Opacity'),    
                             style={'textAlign': 'left'})
                         , width={'size': 2}),
                         dbc.Col([
@@ -310,7 +310,7 @@ app.layout = html.Div([
 
                        dbc.Col(
                             html.Div(
-                                html.P('Marker size'),    
+                                html.P('Marker'),    
                             style={'textAlign': 'right'})
                         , width={'size': 2}),
                         dbc.Col([
@@ -321,9 +321,7 @@ app.layout = html.Div([
                                     tooltip={"placement": "bottom", "always_visible": True},
                             ),
                         ], width={'size': 3}),
-#                        dbc.Col(
-#                            html.Div()
-#                        , width={'size': 1}),
+
                         dbc.Col(
                             dcc.Dropdown(['A-Z, a-z', 'Frequency'], value='A-Z, a-z', id='dropdown_order_labels', clearable = False)
                         , width={'size': 2}),
@@ -344,11 +342,25 @@ app.layout = html.Div([
                     ]),
                     dbc.Row([dbc.Col(html.Hr()),],),
                     dbc.Row([
-                        dbc.Col(button_group_6, width={"size": 4}),
-                        dbc.Col(button_group_9, width={"size": 5}),
+                        dbc.Col(button_group_6, width={"size": 3}),
+                        dbc.Col(button_group_9, width={"size": 4}),
+                        dbc.Col([
+                            dbc.Row(html.Div(
+                                html.P('Probability range'),    
+                                style={'textAlign': 'center'})
+                            ),
+                            dbc.Row(
+                                dcc.RangeSlider(0, 1, 0.05,
+                                    value=[0, 1],
+                                    id='probs_range_slider',
+                                    marks=None,
+                                    tooltip={"placement": "bottom", "always_visible": True}
+                                )
+                            ),
+                        ], width={'size': 3}),
                         dbc.Col(
-                            dcc.Dropdown(dropdown_image_vals, value='Similarity', id='dropdown_order_images', clearable = False)
-                        , width={'offset': 0, 'size': 3})
+                            dcc.Dropdown(dropdown_image_vals, value='Probability', id='dropdown_order_images', clearable = False)
+                        , width={'offset': 0, 'size': 2})
                     ]),
 
                     dbc.Row(
@@ -564,6 +576,8 @@ def mudanca_custom_data(
     global colors_buffer # for the undo
     global init_par_coords
 
+    print("Mudanca custom data")
+
     init_par_coords = False
     set_chart_flag = 0
     df_updated = pd.read_json(s_store_df)
@@ -673,6 +687,7 @@ def mudanca_custom_data(
     Input('dropdown_order_labels', 'value'),
     Input('slider_map_opacity', 'value'),
     Input('slider_marker_size', 'value'),
+    Input('probs_range_slider', 'value'),
     Input('dropdown_order_images', 'value'),
     Input('check_marked_first', 'value'),
     Input('check_discard_relabeled', 'value'),
@@ -690,7 +705,8 @@ def scatter_plot_image_selector(
     i_unchecked_points,
     i_dropdown_order_labels_value, 
     i_slider_map_opacity_value, 
-    i_slider_marker_size_value, 
+    i_slider_marker_size_value,
+    i_range_slider_probs, 
     i_dropdown_order_images_value,
     i_check_marked_first_value,
     i_check_discard_relabeled_value,
@@ -712,7 +728,7 @@ def scatter_plot_image_selector(
     print(flag_callback)
 
     if flag_callback in ['selected_custom_points', 'dropdown_order_labels', 'slider_map_opacity', 'slider_marker_size',
-                         'dropdown_order_images', 'check_marked_first', 'check_discard_relabeled']:
+                         'probs_range_slider', 'dropdown_order_images', 'check_marked_first', 'check_discard_relabeled']:
    
         opacity_changed = False
         if flag_callback == 'slider_map_opacity':
@@ -729,12 +745,16 @@ def scatter_plot_image_selector(
                                             marker_size = i_slider_marker_size_value,xrange = background_ranges['x'], yrange=background_ranges['y'])
         
         filtered_df = _df.loc[_df['custom_data'].isin(selected_points)]
-
+        filtered_df = filtered_df.loc[filtered_df['prob'] >= i_range_slider_probs[0]]
+        filtered_df = filtered_df.loc[filtered_df['prob'] <= i_range_slider_probs[1]]
+        
         if i_check_discard_relabeled_value == [' Hide relabeled images']:
             filtered_df = filtered_df[filtered_df['manual_label'] == filtered_df['correct_label']]    
         
         if i_dropdown_order_images_value == 'Similarity': # show similar images close to each other
             ordered_df = filtered_df.sort_values(by='D7') 
+        elif i_dropdown_order_images_value == 'Probability': # show similar images close to each other
+            ordered_df = filtered_df.sort_values(by='prob', ascending=False) 
         elif i_dropdown_order_images_value != 'A-Z, a-z':
             ordered_df = filtered_df.sort_values(by=i_dropdown_order_images_value) 
         else:
@@ -768,11 +788,12 @@ def scatter_plot_image_selector(
         
         _image_teste_list_widths = ordered_df['widths']
         _image_teste_list_heights = ordered_df['heights']
+        _image_teste_probs = ordered_df['prob']
 
         _image_teste_list_caption = ordered_df['manual_label']
         _image_teste_list_custom_data = ordered_df['custom_data']
-        _image_teste_list_texts = ['id: ' + str(id) + ' (' + label + ') - ' + name \
-            for id, label, name in zip(_image_teste_list_custom_data, _image_teste_list_caption, _image_teste_list_names)]
+        _image_teste_list_texts = [f'id: {id} - {label} ({100*prob:.1f}%) - {name}' \
+            for id, label, name, prob in zip(_image_teste_list_custom_data, _image_teste_list_caption, _image_teste_list_names, _image_teste_probs)]
 
         _image_teste_list_selection = list(ordered_df['selected'])
         
