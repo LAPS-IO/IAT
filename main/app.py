@@ -745,8 +745,8 @@ def scatter_plot_image_selector(
                                             marker_size = i_slider_marker_size_value,xrange = background_ranges['x'], yrange=background_ranges['y'])
         
         filtered_df = _df.loc[_df['custom_data'].isin(selected_points)]
-        filtered_df = filtered_df.loc[filtered_df['prob'] >= i_range_slider_probs[0]]
-        filtered_df = filtered_df.loc[filtered_df['prob'] <= i_range_slider_probs[1]]
+        filtered_df = filtered_df.loc[filtered_df['confs1'] >= i_range_slider_probs[0]]
+        filtered_df = filtered_df.loc[filtered_df['confs1'] <= i_range_slider_probs[1]]
         
         if i_check_discard_relabeled_value == [' Hide relabeled images']:
             filtered_df = filtered_df[filtered_df['manual_label'] == filtered_df['correct_label']]    
@@ -754,7 +754,7 @@ def scatter_plot_image_selector(
         if i_dropdown_order_images_value == 'Similarity': # show similar images close to each other
             ordered_df = filtered_df.sort_values(by='D7') 
         elif i_dropdown_order_images_value == 'Probability': # show similar images close to each other
-            ordered_df = filtered_df.sort_values(by='prob', ascending=False) 
+            ordered_df = filtered_df.sort_values(by='confs1', ascending=False) 
         elif i_dropdown_order_images_value != 'A-Z, a-z':
             ordered_df = filtered_df.sort_values(by=i_dropdown_order_images_value) 
         else:
@@ -788,12 +788,22 @@ def scatter_plot_image_selector(
         
         _image_teste_list_widths = ordered_df['widths']
         _image_teste_list_heights = ordered_df['heights']
-        _image_teste_probs = ordered_df['prob']
+
+        _image_teste_preds1 = ordered_df['preds1'] 
+        _image_teste_confs1 = ordered_df['confs1']
+        _image_teste_preds2 = ordered_df['preds2'] 
+        _image_teste_confs2 = ordered_df['confs2']
+        _image_teste_preds3 = ordered_df['preds3'] 
+        _image_teste_confs3 = ordered_df['confs3']
 
         _image_teste_list_caption = ordered_df['manual_label']
         _image_teste_list_custom_data = ordered_df['custom_data']
-        _image_teste_list_texts = [f'id: {id} - {label} ({100*prob:.1f}%) - {name}' \
-            for id, label, name, prob in zip(_image_teste_list_custom_data, _image_teste_list_caption, _image_teste_list_names, _image_teste_probs)]
+        _image_teste_list_texts = [f'{name[:-4]} - {p1} ({100*c1:.1f}%), {p2} ({100*c2:.1f}%), {p3} ({100*c3:.1f}%)' \
+            for p1, c1, p2, c2, p3, c3, name in \
+            zip(_image_teste_preds1, _image_teste_confs1, \
+                _image_teste_preds2, _image_teste_confs2, \
+                _image_teste_preds3, _image_teste_confs3, \
+                _image_teste_list_names)]
 
         _image_teste_list_selection = list(ordered_df['selected'])
         
