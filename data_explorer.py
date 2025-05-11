@@ -33,7 +33,7 @@ def update_classes_project(batches_list):
     temp_keys = list(temp_classes_project.keys())
     temp_keys.sort()
     counts = [temp_classes_project[k] for k in temp_keys]
-    classes_text = [{'label': k + '(' + str(c) + ')', 'value': k} for k, c in zip(temp_keys, counts)]
+    classes_text = [{'label': f' {k} ({str(c)})', 'value': 'enable'} for k, c in zip(temp_keys, counts)]
     classes_list = [k for k in temp_keys]
     
     return classes_text, classes_list
@@ -153,13 +153,8 @@ app.layout = html.Div([
             dbc.Col([
                 dbc.Button('Display classes', n_clicks=0, id='button_display_classes', style={'background':'chocolate', 'width':'100%'}),
                 dbc.Progress(value=0, id='progress_classes'),
-                dcc.Checklist(
-                    options = [],
-                    value = [],
-                    id = 'checklist_classes',
-                    labelStyle={'display': 'block'},
-                    style={"height": 600, "overflow":"auto"}
-                )], width = 6
+                html.Div(id='slider-container')
+                ], width = 6
             ),
         ]),
     ),
@@ -207,8 +202,7 @@ def progress_classes_update(n):
 
 """
 @app.callback(
-    Output('checklist_classes', 'options'),
-    Output('checklist_classes', 'value'),
+    Output('slider-container', 'children'),
     Output('button_display_classes_nclicks', 'data'),
     Input('button_display_classes', 'n_clicks'),
     Input('checklist_batches', 'value'),
@@ -216,6 +210,7 @@ def progress_classes_update(n):
     State('button_display_classes_nclicks', 'data')
 )
 def update_classes_list(nclicks, checklist_value, project_name, prev_nclicks):
+    components = []
     if nclicks > prev_nclicks and len(checklist_value) > 0:
         batches_folder = join(getcwd(), 'main', 'assets', project_name, 'dataframes')
 
@@ -223,8 +218,40 @@ def update_classes_list(nclicks, checklist_value, project_name, prev_nclicks):
 
         classes_text, classes_list = update_classes_project(checklist_value)
 
-        return classes_text, classes_list, nclicks
-    return [], [], nclicks
+        for i in range(len(classes_text)):
+            slider = dcc.RangeSlider(
+                id={'type': 'dynamic-slider', 'index': i},
+                min=0,
+                max=1,
+                step=0.05,
+                value=[0, 1],
+                marks={0: '0', 1: '1'}
+            )
+            print(classes_text[i])
+
+            checklist = dcc.Checklist(
+                id={'type': 'dynamic-checklist', 'index': i},
+                options=[classes_text[i]],
+                value=['enable'],  # Default checked
+                style={'marginLeft': '20px', 'width' : '45%'}
+            )
+
+            row = html.Div([
+                checklist,
+                html.Div(slider, style={'width': '45%'}),
+
+            ], style={
+                'display': 'flex',
+                'alignItems': 'center',
+                'gap': '20px',
+                'marginBottom': '15px'
+            })
+
+            components.append(row)
+
+        return components, nclicks
+    
+    return components, nclicks
 
 @app.callback(
     Output('checklist_batches', 'options'),
