@@ -206,10 +206,11 @@ def progress_classes_update(n):
     Output('button_display_classes_nclicks', 'data'),
     Input('button_display_classes', 'n_clicks'),
     Input('checklist_batches', 'value'),
+    Input('slider-container', 'children'),
     State('dropdown_project', 'value'),
     State('button_display_classes_nclicks', 'data')
 )
-def update_classes_list(nclicks, checklist_value, project_name, prev_nclicks):
+def update_classes_list(nclicks, checklist_value, slide_container, project_name, prev_nclicks):
     components = []
     if nclicks > prev_nclicks and len(checklist_value) > 0:
         batches_folder = join(getcwd(), 'main', 'assets', project_name, 'dataframes')
@@ -225,7 +226,12 @@ def update_classes_list(nclicks, checklist_value, project_name, prev_nclicks):
                 max=1,
                 step=0.05,
                 value=[0, 1],
-                marks={0: '0', 1: '1'}
+                marks={0: '0', 1: '1'},
+                tooltip={
+                    "placement": "bottom",
+                    "always_visible": True,
+                    "style": {"color": "LightSteelBlue", "fontSize": "20px"},
+                },
             )
             print(classes_text[i])
 
