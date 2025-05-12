@@ -247,7 +247,7 @@ fig_paral =  f_figure_paralelas_coordenadas(
 
 ##############################################################################################################
 
-dropdown_image_vals = ['A-Z, a-z', 'Similarity', 'Probability']
+dropdown_image_vals = ['A-Z, a-z', 'Similarity', 'Confidence', 'Conf diff']
 if df.shape[1] > 30: #> v0.3 
     dropdown_image_vals.extend( [
         'Image State (T/F)',
@@ -346,7 +346,7 @@ app.layout = html.Div([
                         dbc.Col(button_group_9, width={"size": 4}),
                         dbc.Col([
                             dbc.Row(html.Div(
-                                html.P('Probability range'),    
+                                html.P('Confidence range'),    
                                 style={'textAlign': 'center'})
                             ),
                             dbc.Row(
@@ -359,7 +359,7 @@ app.layout = html.Div([
                             ),
                         ], width={'size': 3}),
                         dbc.Col(
-                            dcc.Dropdown(dropdown_image_vals, value='Probability', id='dropdown_order_images', clearable = False)
+                            dcc.Dropdown(dropdown_image_vals, value='Confidence', id='dropdown_order_images', clearable = False)
                         , width={'offset': 0, 'size': 2})
                     ]),
 
@@ -753,8 +753,12 @@ def scatter_plot_image_selector(
         
         if i_dropdown_order_images_value == 'Similarity': # show similar images close to each other
             ordered_df = filtered_df.sort_values(by='D7') 
-        elif i_dropdown_order_images_value == 'Probability': # show similar images close to each other
+        elif i_dropdown_order_images_value == 'Confidence': # show similar images close to each other
             ordered_df = filtered_df.sort_values(by='confs1', ascending=False) 
+        elif i_dropdown_order_images_value == 'Conf diff':
+            if 'conf_diff' not in filtered_df.columns:
+                filtered_df['conf_diff'] = filtered_df['confs1'] - filtered_df['confs2']
+            ordered_df = filtered_df.sort_values(by='conf_diff', ascending=False) 
         elif i_dropdown_order_images_value != 'A-Z, a-z':
             ordered_df = filtered_df.sort_values(by=i_dropdown_order_images_value) 
         else:
