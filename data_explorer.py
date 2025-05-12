@@ -38,11 +38,13 @@ def update_classes_project(batches_list):
     
     return classes_text, classes_list
 
-def get_classes_per_batch(batches_folder, batches_list):
+def read_dfs(batches_folder, batches_list):
     global classes_per_batch, loadbar_classes
     
     count = 0
     temp_list = [l for l in batches_list if l not in classes_per_batch.keys()]
+
+    df_list = []
 
     for file in temp_list:
         count += 1
@@ -52,6 +54,10 @@ def get_classes_per_batch(batches_folder, batches_list):
         df_temp = pd.read_csv(file_path)
         dict_temp = dict(df_temp['manual_label'].value_counts())
         classes_per_batch[file] = dict_temp 
+        df_list.append(df_temp)
+
+    merged_df = pd.concat(df_list, ignore_index=True)
+
 
 def save_dataset(output_folder, project_name, selected_classes, selected_batches):
     global loadbar_save_dataset
@@ -219,7 +225,7 @@ def update_classes_list(nclicks, checklist_value, project_name, prev_nclicks):
     if nclicks > prev_nclicks and len(checklist_value) > 0:
         batches_folder = join(getcwd(), 'main', 'assets', project_name, 'dataframes')
 
-        get_classes_per_batch(batches_folder, checklist_value)
+        read_dfs(batches_folder, checklist_value)
 
         classes_text, classes_list = update_classes_project(checklist_value)
 
