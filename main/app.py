@@ -820,7 +820,7 @@ def scatter_plot_image_selector(
             for p1, c1, name in \
             zip(_image_teste_preds1, _image_teste_confs1, _image_teste_list_names)]
         else:
-            _image_teste_list_texts = [f'{name[:-4]} - {p1} ({100*c1:.1f}%, {p2} ({100*c2:.1f}%, {p3} ({100*c3:.1f}%)' \
+            _image_teste_list_texts = [f'{name[:-4]} - {p1} ({100*c1:.1f}%), {p2} ({100*c2:.1f}%), {p3} ({100*c3:.1f}%)' \
             for p1, c1, p2, c2, p3, c3, name in \
             zip(_image_teste_preds1, _image_teste_confs1, \
                 _image_teste_preds2, _image_teste_confs2, \
