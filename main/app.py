@@ -247,7 +247,15 @@ fig_paral =  f_figure_paralelas_coordenadas(
 
 ##############################################################################################################
 
-dropdown_image_vals = ['A-Z, a-z', 'Similarity', 'Confidence', 'Conf diff']
+dropdown_image_vals = ['A-Z, a-z', 'Similarity']
+
+if 'confs1' in df.columns:
+    dropdown_image_vals.append('Confidence')
+    
+    if 'confs2' in df.columns:
+        dropdown_image_vals.append('Conf diff')
+    
+
 if df.shape[1] > 30: #> v0.3 
     dropdown_image_vals.extend( [
         'Image State (T/F)',
@@ -359,7 +367,7 @@ app.layout = html.Div([
                             ),
                         ], width={'size': 3}),
                         dbc.Col(
-                            dcc.Dropdown(dropdown_image_vals, value='Confidence', id='dropdown_order_images', clearable = False)
+                            dcc.Dropdown(dropdown_image_vals, value='Similarity', id='dropdown_order_images', clearable = False)
                         , width={'offset': 0, 'size': 2})
                     ]),
 
@@ -745,17 +753,18 @@ def scatter_plot_image_selector(
                                             marker_size = i_slider_marker_size_value,xrange = background_ranges['x'], yrange=background_ranges['y'])
         
         filtered_df = _df.loc[_df['custom_data'].isin(selected_points)]
-        filtered_df = filtered_df.loc[filtered_df['confs1'] >= i_range_slider_probs[0]]
-        filtered_df = filtered_df.loc[filtered_df['confs1'] <= i_range_slider_probs[1]]
+        if 'confs1' in filtered_df.columns:
+            filtered_df = filtered_df.loc[filtered_df['confs1'] >= i_range_slider_probs[0]]
+            filtered_df = filtered_df.loc[filtered_df['confs1'] <= i_range_slider_probs[1]]
         
         if i_check_discard_relabeled_value == [' Hide relabeled images']:
             filtered_df = filtered_df[filtered_df['manual_label'] == filtered_df['correct_label']]    
         
         if i_dropdown_order_images_value == 'Similarity': # show similar images close to each other
             ordered_df = filtered_df.sort_values(by='D7') 
-        elif i_dropdown_order_images_value == 'Confidence': # show similar images close to each other
+        elif 'confs1'  in filtered_df.columns and i_dropdown_order_images_value == 'Confidence': # show similar images close to each other
             ordered_df = filtered_df.sort_values(by='confs1', ascending=False) 
-        elif i_dropdown_order_images_value == 'Conf diff':
+        elif 'confs1'  in filtered_df.columns and 'confs2'  in filtered_df.columns and i_dropdown_order_images_value == 'Conf diff':
             if 'conf_diff' not in filtered_df.columns:
                 filtered_df['conf_diff'] = filtered_df['confs1'] - filtered_df['confs2']
             ordered_df = filtered_df.sort_values(by='conf_diff', ascending=False) 
@@ -793,21 +802,31 @@ def scatter_plot_image_selector(
         _image_teste_list_widths = ordered_df['widths']
         _image_teste_list_heights = ordered_df['heights']
 
-        _image_teste_preds1 = ordered_df['preds1'] 
-        _image_teste_confs1 = ordered_df['confs1']
-        _image_teste_preds2 = ordered_df['preds2'] 
-        _image_teste_confs2 = ordered_df['confs2']
-        _image_teste_preds3 = ordered_df['preds3'] 
-        _image_teste_confs3 = ordered_df['confs3']
+        if 'preds1' in ordered_df.columns:
+            _image_teste_preds1 = ordered_df['preds1'] 
+            _image_teste_confs1 = ordered_df['confs1']
+        if 'preds2' in ordered_df.columns:
+            _image_teste_preds2 = ordered_df['preds2'] 
+            _image_teste_confs2 = ordered_df['confs2']
+            _image_teste_preds3 = ordered_df['preds3'] 
+            _image_teste_confs3 = ordered_df['confs3']
 
         _image_teste_list_caption = ordered_df['manual_label']
         _image_teste_list_custom_data = ordered_df['custom_data']
-        _image_teste_list_texts = [f'{name[:-4]} - {p1} ({100*c1:.1f}%), {p2} ({100*c2:.1f}%), {p3} ({100*c3:.1f}%)' \
+        if 'preds1' not in ordered_df.columns:
+            _image_teste_list_texts = [f'{name[:-4]} - Pred: {label}' for name, label in zip(_image_teste_list_names, _image_teste_list_correct_label)] 
+        elif 'preds2' not in ordered_df.columns:       
+            _image_teste_list_texts = [f'{name[:-4]} - {p1} ({100*c1:.1f}%)' \
+            for p1, c1, name in \
+            zip(_image_teste_preds1, _image_teste_confs1, _image_teste_list_names)]
+        else:
+            _image_teste_list_texts = [f'{name[:-4]} - {p1} ({100*c1:.1f}%, {p2} ({100*c2:.1f}%, {p3} ({100*c3:.1f}%)' \
             for p1, c1, p2, c2, p3, c3, name in \
             zip(_image_teste_preds1, _image_teste_confs1, \
                 _image_teste_preds2, _image_teste_confs2, \
                 _image_teste_preds3, _image_teste_confs3, \
                 _image_teste_list_names)]
+
 
         _image_teste_list_selection = list(ordered_df['selected'])
         
