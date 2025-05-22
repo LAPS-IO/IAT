@@ -248,6 +248,8 @@ fig_paral =  f_figure_paralelas_coordenadas(
 ##############################################################################################################
 
 dropdown_image_vals = ['A-Z, a-z', 'Similarity']
+map_columns_vals = {'area': 'Seg Area', 'perimeter': 'Perimeter', 'circularity': 'Circularity', 'avg_contour': 'Avg Contour', \
+                    'avg_intensity': 'Avg Intensity', 'elongation': 'Elongation'}
 
 if 'confs1' in df.columns:
     dropdown_image_vals.append('Confidence')
@@ -255,6 +257,9 @@ if 'confs1' in df.columns:
     if 'confs2' in df.columns:
         dropdown_image_vals.append('Conf diff')
     
+for key in map_columns_vals.keys():
+    if key in df.columns:
+        dropdown_image_vals.append(map_columns_vals[key])
 
 if df.shape[1] > 30: #> v0.3 
     dropdown_image_vals.extend( [
@@ -733,6 +738,7 @@ def scatter_plot_image_selector(
     flag_callback = ctx.triggered[0]['prop_id'].split('.')[0]
 
     _df = pd.read_json(s_store_df)
+
     print(flag_callback)
 
     if flag_callback in ['selected_custom_points', 'dropdown_order_labels', 'slider_map_opacity', 'slider_marker_size',
@@ -760,11 +766,16 @@ def scatter_plot_image_selector(
         if i_check_discard_relabeled_value == [' Hide relabeled images']:
             filtered_df = filtered_df[filtered_df['manual_label'] == filtered_df['correct_label']]    
         
-        if i_dropdown_order_images_value == 'Similarity': # show similar images close to each other
+        if i_dropdown_order_images_value in map_columns_vals.values():
+            key = [k for k, v in map_columns_vals.items() if v == i_dropdown_order_images_value][0]
+            if key in filtered_df.columns:
+                ordered_df = filtered_df.sort_values(by=key, ascending=False)
+
+        elif i_dropdown_order_images_value == 'Similarity': # show similar images close to each other
             ordered_df = filtered_df.sort_values(by='D7') 
-        elif 'confs1'  in filtered_df.columns and i_dropdown_order_images_value == 'Confidence': # show similar images close to each other
+        elif 'confs1' in filtered_df.columns and i_dropdown_order_images_value == 'Confidence':
             ordered_df = filtered_df.sort_values(by='confs1', ascending=False) 
-        elif 'confs1'  in filtered_df.columns and 'confs2'  in filtered_df.columns and i_dropdown_order_images_value == 'Conf diff':
+        elif 'confs1' in filtered_df.columns and 'confs2'  in filtered_df.columns and i_dropdown_order_images_value == 'Conf diff':
             if 'conf_diff' not in filtered_df.columns:
                 filtered_df['conf_diff'] = filtered_df['confs1'] - filtered_df['confs2']
             ordered_df = filtered_df.sort_values(by='conf_diff', ascending=False) 
@@ -802,6 +813,13 @@ def scatter_plot_image_selector(
         _image_teste_list_widths = ordered_df['widths']
         _image_teste_list_heights = ordered_df['heights']
 
+        _image_attributes = [""] * ordered_df.shape[0]
+
+        if i_dropdown_order_images_value in map_columns_vals.values():
+            key = [k for k, v in map_columns_vals.items() if v == i_dropdown_order_images_value][0]
+            print("AAA", key)
+            _image_attributes = ordered_df[key].tolist()
+
         if 'preds1' in ordered_df.columns:
             _image_teste_preds1 = ordered_df['preds1'] 
             _image_teste_confs1 = ordered_df['confs1']
@@ -814,18 +832,18 @@ def scatter_plot_image_selector(
         _image_teste_list_caption = ordered_df['manual_label']
         _image_teste_list_custom_data = ordered_df['custom_data']
         if 'preds1' not in ordered_df.columns:
-            _image_teste_list_texts = [f'{name[:-4]} - Pred: {label}' for name, label in zip(_image_teste_list_names, _image_teste_list_correct_label)] 
+            _image_teste_list_texts = [f'{name[:-4]} - Pred: {label}, Attr: {val}' for name, label, val in zip(_image_teste_list_names, _image_teste_list_correct_label, _image_attributes)] 
         elif 'preds2' not in ordered_df.columns:       
-            _image_teste_list_texts = [f'{name[:-4]} - {p1} ({100*c1:.1f}%)' \
-            for p1, c1, name in \
-            zip(_image_teste_preds1, _image_teste_confs1, _image_teste_list_names)]
+            _image_teste_list_texts = [f'{name[:-4]} - {p1} ({100*c1:.1f}%, Attr: {val})' \
+            for p1, c1, name, val in \
+            zip(_image_teste_preds1, _image_teste_confs1, _image_teste_list_names, _image_attributes)]
         else:
-            _image_teste_list_texts = [f'{name[:-4]} - {p1} ({100*c1:.1f}%), {p2} ({100*c2:.1f}%), {p3} ({100*c3:.1f}%)' \
-            for p1, c1, p2, c2, p3, c3, name in \
+            _image_teste_list_texts = [f'{name[:-4]} - {p1} ({100*c1:.1f}%, Attr: {val}), {p2} ({100*c2:.1f}%), {p3} ({100*c3:.1f}%)' \
+            for p1, c1, p2, c2, p3, c3, name, val in \
             zip(_image_teste_preds1, _image_teste_confs1, \
                 _image_teste_preds2, _image_teste_confs2, \
                 _image_teste_preds3, _image_teste_confs3, \
-                _image_teste_list_names)]
+                _image_teste_list_names, _image_attributes)]
 
 
         _image_teste_list_selection = list(ordered_df['selected'])
