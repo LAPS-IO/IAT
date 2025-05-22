@@ -33,7 +33,7 @@ def apply_otsu(image_path):
 
     if perimeter > 0:
         circularity = (4 * 3.14 * area / (perimeter) ** 2)
-    if perimeter < 5:
+    if len(contours[0]) < 5:
         elongation = -1
     else:
         ellipse = cv2.fitEllipse(contours[0])
@@ -84,10 +84,15 @@ def add_attributes_to_dataframe(batch_name, dataframes_folder, images_folder, pr
     df.to_csv(dataframe_path, index=False)
 
 
-if len(sys.argv) > 1:
+if len(sys.argv) == 4:
     project_name = sys.argv[1]
+    first_batch = int(sys.argv[2])
+    last_batch = int(sys.argv[3])
+    if first_batch > last_batch:
+        print("Error: first_batch should be less than or equal to last_batch")
+        sys.exit(1)
 else:
-    print("Usage: python add_attributes.py <project_name>")
+    print("Usage: python add_attributes.py <project_name> <first_batch> <last_batch>")
     sys.exit(1)
 
 dataframes_folder = os.path.join("main", "assets", project_name, "dataframes")
@@ -96,7 +101,7 @@ images_folder = os.path.join("main", "assets", project_name, "images")
 list_batches = os.listdir(images_folder)
 list_batches.sort()
 
-for batch_name in list_batches[:10]:
+for batch_name in list_batches[first_batch:last_batch+1]:
     # Check if the batch folder is a directory
     if os.path.isdir(os.path.join(images_folder, batch_name)):
         print(f"Adding attributes to: {batch_name}")

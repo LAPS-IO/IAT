@@ -232,8 +232,8 @@ if df.shape[1] < 30: #v0.2
         _columns_paralelas_coordenadas = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7']
     else:
         _columns_paralelas_coordenadas = ['D1', 'x2', 'y2', 'D4', 'x3', 'y3', 'D7']
-else: #v0.3
-    _columns_paralelas_coordenadas = ['D1', 'D4', 'D7', 'Area (pxl)', 'circularity', 'Elongation', 'Mean Intensity']
+#else: #v0.3
+#    _columns_paralelas_coordenadas = ['D1', 'D4', 'D7', 'Area (pxl)', 'circularity', 'Elongation', 'Mean Intensity']
 
 
 fig_paral =  f_figure_paralelas_coordenadas(
@@ -261,21 +261,21 @@ for key in map_columns_vals.keys():
     if key in df.columns:
         dropdown_image_vals.append(map_columns_vals[key])
 
-if df.shape[1] > 30: #> v0.3 
-    dropdown_image_vals.extend( [
-        'Image State (T/F)',
-        'SegmentationMethod',
-        'Area (pxl)',
-        'Image Width (pxl)',
-        'Image Size (pxl)',
-        'circularity',
-        'Elongation',
-        'Rectangularity',
-        'Mean Intensity',
-        'Median Intensity',
-        'Contrast',
-        'Solidity'        
-    ])
+# if df.shape[1] > 30: #> v0.3 
+#     dropdown_image_vals.extend( [
+#         'Image State (T/F)',
+#         'SegmentationMethod',
+#         'Area (pxl)',
+#         'Image Width (pxl)',
+#         'Image Size (pxl)',
+#         'circularity',
+#         'Elongation',
+#         'Rectangularity',
+#         'Mean Intensity',
+#         'Median Intensity',
+#         'Contrast',
+#         'Solidity'        
+#     ])
 dropdown_image_vals.sort()
 
 app.layout = html.Div([
