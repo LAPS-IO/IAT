@@ -78,22 +78,22 @@ def get_classes(batches_folder, batches_list):
     return classes_list
 
 def get_histogram_data(batches_folder, batches_list, classes_list):
-    """Generate histogram data for each class based on probability distributions"""
+    """Generate histogram data for each class based on confidence distributions"""
     hist_data = {}
     
     for label in classes_list:
-        all_probs = []
+        all_confs = []
         
         for file in batches_list:
             file_path = join(batches_folder, file)
             df_temp = pd.read_csv(file_path)
             
-            # Get probabilities for this class
-            class_probs = df_temp[df_temp['manual_label'] == label]['prob'].tolist()
-            all_probs.extend(class_probs)
+            # Get confidence values for this class
+            class_confs = df_temp[df_temp['manual_label'] == label]['manual_conf'].tolist()
+            all_confs.extend(class_confs)
         
-        if all_probs:
-            hist_data[label] = all_probs
+        if all_confs:
+            hist_data[label] = all_confs
     
     return hist_data
 
@@ -124,15 +124,15 @@ def get_classes_per_batch(batches_folder, batches_list, classes_list, slider_val
         print(len(slider_values) if slider_values else 0, len(classes_list))
         if slider_values is not None and len(slider_values) == len(classes_list):
             for i, label in enumerate(classes_list):
-                filtered = df_temp[(df_temp['manual_label'] == label) & (df_temp['prob'] >= slider_values[i][0]) & (df_temp['prob'] <= slider_values[i][1])]
+                filtered = df_temp[(df_temp['manual_label'] == label) & (df_temp['manual_conf'] >= slider_values[i][0]) & (df_temp['manual_conf'] < slider_values[i][1])]
                 classes_per_batch[file][label] = len(filtered)
-                print(f"Class {label}: {len(filtered)} rows (prob range: {slider_values[i][0]}-{slider_values[i][1]})")
+                print(f"Class {label}: {len(filtered)} rows (conf range: {slider_values[i][0]}-{slider_values[i][1]})")
         else:
             # Use default range [0.85, 1] when no slider values are provided
             for i, label in enumerate(classes_list):
-                filtered = df_temp[(df_temp['manual_label'] == label) & (df_temp['prob'] >= 0.85) & (df_temp['prob'] <= 1.0)]
+                filtered = df_temp[(df_temp['manual_label'] == label) & (df_temp['manual_conf'] >= 0.85) & (df_temp['manual_conf'] < 1.0)]
                 classes_per_batch[file][label] = len(filtered)
-                print(f"Class {label}: {len(filtered)} rows (default prob range: 0.85-1.0)")
+                print(f"Class {label}: {len(filtered)} rows (default conf range: 0.85-1.0)")
 
         count += 1
         loadbar_classes = 100*count/len(batches_list)
@@ -160,15 +160,21 @@ def save_dataset(output_folder, project_name, selected_classes, selected_batches
             # Find the slider values for this class
             class_index = selected_classes.index(label)
             if class_index < len(slider_values) and slider_values[class_index] is not None:
-                min_prob, max_prob = slider_values[class_index]
+                min_conf, max_conf = slider_values[class_index]
                 # Create filtered folder
-                filtered_folder_name = f"{label}_>={min_prob}_<={max_prob}"
+                if max_conf == 1.0:
+                    filtered_folder_name = f"{label}>={int(min_conf*100)}"
+                else:
+                    filtered_folder_name = f"{label}>={int(min_conf*100)}and<{int(max_conf*100)}"
                 filtered_label_path = join(output_folder, filtered_folder_name)
                 if not exists(filtered_label_path):
                     mkdir(filtered_label_path)
                 
                 # Create remaining folder
-                remaining_folder_name = f"{label}_<{min_prob}_>{max_prob}"
+                if max_conf == 1.0:
+                    remaining_folder_name = f"{label}<{int(min_conf*100)}"
+                else:
+                    remaining_folder_name = f"{label}<{int(min_conf*100)}or>={int(max_conf*100)}"
                 remaining_label_path = join(output_folder, remaining_folder_name)
                 if not exists(remaining_label_path):
                     mkdir(remaining_label_path)
@@ -212,23 +218,23 @@ def save_dataset(output_folder, project_name, selected_classes, selected_batches
             
             for i, label in enumerate(selected_classes):
                 if i < len(slider_values) and slider_values[i] is not None:
-                    min_prob, max_prob = slider_values[i]
+                    min_conf, max_conf = slider_values[i]
                     
                     # Get filtered images (within range)
                     class_filtered = df_filtered[
                         (df_filtered['manual_label'] == label) & 
-                        (df_filtered['prob'] >= min_prob) & 
-                        (df_filtered['prob'] <= max_prob)
+                        (df_filtered['manual_conf'] >= min_conf) & 
+                        (df_filtered['manual_conf'] < max_conf)
                     ]
-                    print(f"Class {label}: {len(class_filtered)} rows (prob range: {min_prob}-{max_prob})")
+                    print(f"Class {label}: {len(class_filtered)} rows (conf range: {min_conf}-{max_conf})")
                     filtered_rows.append(class_filtered)
                     
                     # Get remaining images (outside range)
                     class_remaining = df_filtered[
                         (df_filtered['manual_label'] == label) & 
-                        ((df_filtered['prob'] < min_prob) | (df_filtered['prob'] > max_prob))
+                        ((df_filtered['manual_conf'] < min_conf) | (df_filtered['manual_conf'] > max_conf))
                     ]
-                    print(f"Class {label}: {len(class_remaining)} rows (outside prob range: {min_prob}-{max_prob})")
+                    print(f"Class {label}: {len(class_remaining)} rows (outside conf range: {min_conf}-{max_conf})")
                     remaining_rows.append(class_remaining)
             
             # Save filtered images
@@ -239,8 +245,11 @@ def save_dataset(output_folder, project_name, selected_classes, selected_batches
                     name = row['names']
                     label = row['manual_label']
                     class_index = selected_classes.index(label)
-                    min_prob, max_prob = slider_values[class_index]
-                    filtered_folder_name = f"{label}_>={min_prob}_<={max_prob}"
+                    min_conf, max_conf = slider_values[class_index]
+                    if max_conf == 1.0:
+                        filtered_folder_name = f"{label}>={int(min_conf*100)}"
+                    else:
+                        filtered_folder_name = f"{label}>={int(min_conf*100)}and<{int(max_conf*100)}"
                     filtered_label_path = join(output_folder, filtered_folder_name)
                     copy2(join(batch_images_folder, name), join(filtered_label_path, name))
             
@@ -252,8 +261,11 @@ def save_dataset(output_folder, project_name, selected_classes, selected_batches
                     name = row['names']
                     label = row['manual_label']
                     class_index = selected_classes.index(label)
-                    min_prob, max_prob = slider_values[class_index]
-                    remaining_folder_name = f"{label}_<{min_prob}_>{max_prob}"
+                    min_conf, max_conf = slider_values[class_index]
+                    if max_conf == 1.0:
+                        remaining_folder_name = f"{label}<{int(min_conf*100)}"
+                    else:
+                        remaining_folder_name = f"{label}<{int(min_conf*100)}or>={int(max_conf*100)}"
                     remaining_label_path = join(output_folder, remaining_folder_name)
                     copy2(join(batch_images_folder, name), join(remaining_label_path, name))
         else:
@@ -426,12 +438,24 @@ def update_classes_list(checklist_value, slide_container, slider_values, project
             # Create histogram for this class
             if classes_list[i] in hist_data:
                 hist_fig = go.Figure()
+                
+                # Create exactly 20 bins with steps of 0.05
+                bin_edges = [i * 0.05 for i in range(21)]  # 0, 0.05, 0.1, ..., 1.0
+                
+                # Debug: print the data for this class
+                print(f"Histogram data for {classes_list[i]}: {hist_data[classes_list[i]]}")
+                
                 hist_fig.add_trace(go.Histogram(
                     x=hist_data[classes_list[i]],
-                    nbinsx=20,
+                    xbins=dict(
+                        start=0,
+                        end=1.001,  # Slightly extend to ensure value 1 is included
+                        size=0.05
+                    ),
                     name=classes_list[i],
                     opacity=0.7,
-                    marker_color='lightblue'
+                    marker_color='lightblue',
+                    nbinsx=20  # Ensure exactly 20 bins
                 ))
                 
                 # Add vertical lines for slider range
@@ -442,8 +466,15 @@ def update_classes_list(checklist_value, slide_container, slider_values, project
                     height=48,
                     margin=dict(l=10, r=10, t=10, b=10),
                     showlegend=False,
-                    xaxis=dict(showticklabels=False, range=[-0.07, 1.07]),
-                    yaxis=dict(showticklabels=False)
+                    xaxis=dict(
+                        showticklabels=False, 
+                        range=[-0.07, 1.07],
+                        showgrid=False
+                    ),
+                    yaxis=dict(
+                        showticklabels=False,
+                        showgrid=False
+                    )
                 )
             else:
                 hist_fig = go.Figure()
@@ -471,24 +502,22 @@ def update_classes_list(checklist_value, slide_container, slider_values, project
             slider = dcc.RangeSlider(
                 id={'type': 'dynamic-slider', 'index': i},
                 min=0,
-                max=1,
+                max=1.0,
                 step=0.05,
                 value=slider_value,
                 marks={0: '0', 1: '1'},
                 tooltip={
                     "placement": "bottom",
                     "always_visible": True,
-                    "style": {"color": "LightSteelBlue", "fontSize": "20px"},
+                    "style": {"color": "DarkBlue", "fontSize": "20px"},
                 }
             )
-
-            slider_container = html.Div(slider, style={'marginTop': '-16px'})
 
             row = html.Div([
                 checklist,
                 html.Div([
                     histogram,
-                    slider_container
+                    html.Div(slider, style={'marginTop': '-16px'})
                 ], style={'width': '45%'}),
 
             ], style={
