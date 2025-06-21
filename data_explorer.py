@@ -29,7 +29,7 @@ def update_classes_project(batches_list, project_name):
     print(f"Batches: {batches_list}")
     print(f"Classes per batch keys: {list(classes_per_batch.keys())}")
 
-    for file in batches_list:
+    for i, file in enumerate(batches_list):
         if file in classes_per_batch:
             dict_temp = classes_per_batch[file]
             print(f"File {file}: {dict_temp}")
@@ -79,63 +79,80 @@ def get_classes(batches_folder, batches_list):
 
 def get_histogram_data(batches_folder, batches_list, classes_list):
     """Generate histogram data for each class based on confidence distributions"""
+    global loadbar_classes
     hist_data = {}
     
+    # Initialize histogram data for each class
     for label in classes_list:
-        all_confs = []
+        hist_data[label] = []
+    
+    # Loop through files first, then classes to avoid reading the same file multiple times
+    for i, file in enumerate(batches_list):
+        file_path = join(batches_folder, file)
+        df_temp = pd.read_csv(file_path)
         
-        for file in batches_list:
-            file_path = join(batches_folder, file)
-            df_temp = pd.read_csv(file_path)
-            
-            # Get confidence values for this class
+        # Process all classes for this file
+        for label in classes_list:
+            # Get confidence values for this class from this file
             class_confs = df_temp[df_temp['manual_label'] == label]['manual_conf'].tolist()
-            all_confs.extend(class_confs)
+            hist_data[label].extend(class_confs)
         
-        if all_confs:
-            hist_data[label] = all_confs
+        # Update progress bar
+        loadbar_classes = 20 + 60*i/len(batches_list)
     
     return hist_data
 
-def get_classes_per_batch(batches_folder, batches_list, classes_list, slider_values=None):
+def get_classes_per_batch(batches_folder, batches_list, classes_list, slider_values=None, changed_slider_index=None):
     global classes_per_batch, loadbar_classes
 
     print()
     print("Get classes per batch")
     print()
+    count = 0
     
     if slider_values is not None:
         print(f"Slider values received in get_classes_per_batch: {slider_values}")
+        if changed_slider_index is not None:
+            print(f"Only updating slider at index: {changed_slider_index}")
     else:
         print("No slider values provided, using default range [0.85, 1]")
     
-    # Clear the classes_per_batch to ensure fresh calculation
-    classes_per_batch = {}
-    
-    count = 0
+    # Only clear classes_per_batch if this is a fresh calculation (no changed_slider_index)
+    if changed_slider_index is None:
+        classes_per_batch = {}
 
     for file in batches_list:
         file_path = join(batches_folder, file)
         df_temp = pd.read_csv(file_path)
         
-        # Initialize the file entry in classes_per_batch
-        classes_per_batch[file] = {}
+        # Initialize the file entry in classes_per_batch if it doesn't exist
+        if file not in classes_per_batch:
+            classes_per_batch[file] = {}
 
         print(len(slider_values) if slider_values else 0, len(classes_list))
         if slider_values is not None and len(slider_values) == len(classes_list):
             for i, label in enumerate(classes_list):
-                filtered = df_temp[(df_temp['manual_label'] == label) & (df_temp['manual_conf'] >= slider_values[i][0]) & (df_temp['manual_conf'] < slider_values[i][1])]
-                classes_per_batch[file][label] = len(filtered)
-                print(f"Class {label}: {len(filtered)} rows (conf range: {slider_values[i][0]}-{slider_values[i][1]})")
+                # Only recalculate if this is the changed slider or if no specific slider was changed
+                if changed_slider_index is None or i == changed_slider_index:
+                    filtered = df_temp[(df_temp['manual_label'] == label) & (df_temp['manual_conf'] >= slider_values[i][0]) & (df_temp['manual_conf'] < slider_values[i][1])]
+                    classes_per_batch[file][label] = len(filtered)
+                    print(f"Class {label}: {len(filtered)} rows (conf range: {slider_values[i][0]}-{slider_values[i][1]})")
+                # If this is not the changed slider, keep the existing value (if it exists)
+                elif label not in classes_per_batch[file]:
+                    # Fallback to default range if no existing value
+                    filtered = df_temp[(df_temp['manual_label'] == label) & (df_temp['manual_conf'] >= 0.85) & (df_temp['manual_conf'] < 1.0)]
+                    classes_per_batch[file][label] = len(filtered)
+                    print(f"Class {label}: {len(filtered)} rows (default conf range: 0.85-1.0) - fallback")
         else:
             # Use default range [0.85, 1] when no slider values are provided
             for i, label in enumerate(classes_list):
-                filtered = df_temp[(df_temp['manual_label'] == label) & (df_temp['manual_conf'] >= 0.85) & (df_temp['manual_conf'] < 1.0)]
-                classes_per_batch[file][label] = len(filtered)
-                print(f"Class {label}: {len(filtered)} rows (default conf range: 0.85-1.0)")
-
+                # Only recalculate if this is the changed slider or if no specific slider was changed
+                if changed_slider_index is None or i == changed_slider_index:
+                    filtered = df_temp[(df_temp['manual_label'] == label) & (df_temp['manual_conf'] >= 0.85) & (df_temp['manual_conf'] < 1.0)]
+                    classes_per_batch[file][label] = len(filtered)
+                    print(f"Class {label}: {len(filtered)} rows (default conf range: 0.85-1.0)")
         count += 1
-        loadbar_classes = 100*count/len(batches_list)
+        loadbar_classes = 20*count/len(batches_list)
 
 def save_dataset(output_folder, project_name, selected_classes, selected_batches, slider_values=None):
     global loadbar_save_dataset
@@ -290,6 +307,7 @@ classes_per_batch = {}
 loadbar_classes = 0
 loadbar_save_dataset = 0
 current_classes_list = []  # Store the current class names
+previous_slider_values = []  # Store previous slider values to detect changes
 get_projects_list()
 datasets_list = get_datasets_list()
 
@@ -335,15 +353,28 @@ app.layout = html.Div([
                         value = [],
                         id = 'checklist_batches',
                         labelStyle={'display': 'block'},
-                        style={"height": 600, "overflow":"auto"}
-                    )
+                        style={"height": 500, "overflow":"auto"}
+                    ),
+                    html.Div([
+                        dbc.Button('Update Classes & Histograms', n_clicks=0, id='button_update_classes', 
+                                 style={'background':'steelblue', 'width':'100%', 'marginTop': '10px'}),
+                        dbc.Progress(value=0, id='progress_classes', style={'marginTop': '10px'})
+                    ])
                 ], width = 6
             ),
             dbc.Col([
-                dbc.Progress(value=0, id='progress_classes'),
-                html.Div(id='slider-container')
-
-                ], width = 6
+                html.Div(
+                    id='slider-container',
+                    style={
+                        'height': '600px',
+                        'overflow': 'auto',
+                        'border': '1px solid #ddd',
+                        'borderRadius': '5px',
+                        'padding': '10px',
+                        'backgroundColor': '#f8f9fa'
+                    }
+                )
+            ], width = 6
             ),
         ]),
     ),
@@ -373,6 +404,7 @@ app.layout = html.Div([
 
     dcc.Interval(id='clock', interval=1000, n_intervals=0, max_intervals=-1),
     dcc.Store(id='button_display_classes_nclicks', data=0),
+    dcc.Store(id='button_update_classes_nclicks', data=0),
     dcc.Store(id='dataset_name_ok', data=False),
     dcc.Store(id='save_dataset_result', data=0),
 ])
@@ -381,12 +413,21 @@ app.layout = html.Div([
     Updates the loadbar when the button_display_classes is pressed
 """
 @app.callback(
-    Output("progress_classes", "value"),
     Output("progress_save_dataset", "value"),
     Input("clock", "n_intervals"))
 def progress_classes_update(n):
-    global loadbar_classes, loadbar_save_dataset
-    return (loadbar_classes, ), (loadbar_save_dataset, )
+    global loadbar_save_dataset
+    return (loadbar_save_dataset, )
+
+"""
+    Updates the classes progress bar
+"""
+@app.callback(
+    Output("progress_classes", "value"),
+    Input("clock", "n_intervals"))
+def progress_classes_update_separate(n):
+    global loadbar_classes
+    return (loadbar_classes, )
 
 """
 
@@ -394,34 +435,47 @@ def progress_classes_update(n):
 @app.callback(
     Output('slider-container', 'children'),
     Output('button_display_classes_nclicks', 'data'),
-    Input('checklist_batches', 'value'),
+    Output('button_update_classes_nclicks', 'data'),
+    Input('button_update_classes', 'n_clicks'),
     Input('slider-container', 'children'),
     Input({'type': 'dynamic-slider', 'index': dash.ALL}, 'value'),
     State('dropdown_project', 'value'),
-    State('button_display_classes_nclicks', 'data')
+    State('checklist_batches', 'value'),
+    State('button_display_classes_nclicks', 'data'),
+    State('button_update_classes_nclicks', 'data')
 )
-def update_classes_list(checklist_value, slide_container, slider_values, project_name, prev_nclicks):
-    global current_classes_list
+def update_classes_list(button_clicks, slide_container, slider_values, project_name, checklist_value, prev_nclicks, prev_button_clicks):
+    global current_classes_list, previous_slider_values, loadbar_classes
     components = []
     
     print("=== update_classes_list called ===")
+    print(f"button_clicks: {button_clicks}")
     print(f"checklist_value: {checklist_value}")
     print(f"slider_values: {slider_values}")
     print(f"project_name: {project_name}")
     
-    # Check if triggered by batch selection or slider change
-    batch_triggered = len(checklist_value) > 0
+    # Check if triggered by button click
+    button_triggered = button_clicks and button_clicks > prev_button_clicks
     
     # Check if triggered by slider change
     slider_triggered = any(value is not None for value in slider_values) if slider_values else False
     
-    print(f"batch_triggered: {batch_triggered}")
+    print(f"button_triggered: {button_triggered}")
     print(f"slider_triggered: {slider_triggered}")
     
-    if batch_triggered or slider_triggered:
+    # Detect which slider changed (if any)
+    changed_slider_index = None
+    if slider_triggered and slider_values and previous_slider_values:
+        for i, (current, previous) in enumerate(zip(slider_values, previous_slider_values)):
+            if current != previous:
+                changed_slider_index = i
+                print(f"Slider {i} changed from {previous} to {current}")
+                break
+    
+    if button_triggered or slider_triggered:
         batches_folder = join(getcwd(), 'main', 'assets', project_name, 'dataframes')
         classes_list = get_classes(batches_folder, checklist_value)
-        get_classes_per_batch(batches_folder, checklist_value, classes_list, slider_values)
+        get_classes_per_batch(batches_folder, checklist_value, classes_list, slider_values, changed_slider_index)
         classes_text, classes_list = update_classes_project(checklist_value, project_name)
         
         # Generate histogram data
@@ -429,6 +483,10 @@ def update_classes_list(checklist_value, slide_container, slider_values, project
         
         # Store the current class names globally
         current_classes_list = classes_list
+        
+        # Update previous slider values for next comparison
+        if slider_values:
+            previous_slider_values = slider_values.copy()
 
         for i in range(len(classes_text)):
             # Use existing slider values or defaults
@@ -527,11 +585,15 @@ def update_classes_list(checklist_value, slide_container, slider_values, project
                 'marginBottom': '15px'
             })
 
+            loadbar_classes = 80 + 20*i/len(classes_text)
+
             components.append(row)
 
-        return components, prev_nclicks + 1 if batch_triggered else prev_nclicks
+        loadbar_classes = 100
+
+        return components, prev_nclicks + 1 if button_triggered else prev_nclicks, button_clicks
     
-    return components, prev_nclicks
+    return components, prev_nclicks, button_clicks
 
 @app.callback(
     Output('checklist_batches', 'options'),
@@ -540,7 +602,7 @@ def update_classes_list(checklist_value, slide_container, slider_values, project
     Input('dropdown_project', 'value')
 )
 def update_batches_list(project_name):
-    global classes_per_batch, loadbar_classes, loadbar_save_dataset
+    global classes_per_batch, loadbar_classes, loadbar_save_dataset, previous_slider_values
 
     if project_name != '':
         batches_folder = join(getcwd(), 'main', 'assets', project_name, 'dataframes')
@@ -557,6 +619,7 @@ def update_batches_list(project_name):
         classes_per_batch = {}
         loadbar_classes = 0
         loadbar_save_dataset = 0
+        previous_slider_values = []  # Reset previous slider values for new project
 
         return batches_text, batches_list, project_name + '_dataset'
     return [], [], 'dataset'
