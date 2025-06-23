@@ -9,6 +9,7 @@ import pandas as pd
 import os
 import glob
 from pathlib import Path
+import sys
 
 def update_csv_file(file_path):
     """
@@ -22,18 +23,14 @@ def update_csv_file(file_path):
     # Read the CSV file
     df = pd.read_csv(file_path)
     
-    # Check if 'prob' column exists
-    if 'prob' not in df.columns:
-        print(f"  Warning: 'prob' column not found in {file_path}")
-        return
-    
+        
     # Rename 'prob' to 'conf1'
-    df = df.rename(columns={'prob': 'conf1'})
+    df = df.rename(columns={'prob': 'confs1'})
     
     # Add 'manual_conf' column
     # If manual_label == correct_label, use conf1 value, otherwise use 1
     df['manual_conf'] = df.apply(
-        lambda row: row['conf1'] if row['manual_label'] == row['correct_label'] else 0.9999, 
+        lambda row: row['confs1'] if row['manual_label'] == row['correct_label'] else 0.9999, 
         axis=1
     )
     
@@ -41,12 +38,12 @@ def update_csv_file(file_path):
     df.to_csv(file_path, index=False)
     print(f"  Updated: {file_path}")
 
-def main():
+    return df
+
+def main(csv_dir):
     """
     Main function to process all CSV files in the specified directory.
     """
-    # Define the directory path
-    csv_dir = "/home/alexandre/Code/IO/IAT/main/assets/ILT_outputs/dataframes"
     
     # Check if directory exists
     if not os.path.exists(csv_dir):
@@ -76,4 +73,9 @@ def main():
     print("\nProcessing complete!")
 
 if __name__ == "__main__":
-    main() 
+        # Define the directory path
+    if len(sys.argv) < 2:
+        print("Usage: python update_conf.py <csv_dir>")
+        sys.exit(1)
+    csv_dir = sys.argv[1]
+    main(csv_dir=csv_dir) 

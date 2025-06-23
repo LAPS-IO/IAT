@@ -11,6 +11,7 @@ import pandas as pd
 from os import listdir, getcwd, mkdir
 from os.path import join, isdir, exists
 from shutil import copy2
+from update_conf import update_csv_file
 
 def get_projects_list():
     global projects_list
@@ -346,36 +347,56 @@ app.layout = html.Div([
 
     dbc.Container(
         dbc.Row([
-            dbc.Col(
-                [
-                    dcc.Checklist(
-                        options = [],
-                        value = [],
-                        id = 'checklist_batches',
-                        labelStyle={'display': 'block'},
-                        style={"height": 500, "overflow":"auto"}
-                    ),
+            html.Div([
+                dbc.Col(
+                    [
+                        html.Div([
+                            dcc.Checklist(
+                                options = [],
+                                value = [],
+                                id = 'checklist_batches',
+                                labelStyle={'display': 'block'},
+                                style={
+                                    "overflow": "auto", 
+                                    'border': '1px solid #ddd', 
+                                    'borderRadius': '5px', 
+                                    'padding': '10px', 
+                                    'backgroundColor': '#f8f9fa',
+                                    'height': '100%',
+                                    'flexGrow': 1,
+                                    'minHeight': 0
+                                }
+                            ),
+                            html.Div([
+                                dbc.Button('Update Classes & Histograms', n_clicks=0, id='button_update_classes', 
+                                         style={'background':'steelblue', 'width':'100%'}),
+                                dbc.Progress(value=0, id='progress_classes', style={'marginTop': '10px'})
+                            ], style={'marginTop': '10px'})
+                        ], style={'display': 'flex', 'flexDirection': 'column', 'height': '100%'})
+                    ], width = 6
+                ),
+                dbc.Col([
                     html.Div([
-                        dbc.Button('Update Classes & Histograms', n_clicks=0, id='button_update_classes', 
-                                 style={'background':'steelblue', 'width':'100%', 'marginTop': '10px'}),
-                        dbc.Progress(value=0, id='progress_classes', style={'marginTop': '10px'})
-                    ])
+                        html.Div(
+                            id='slider-container',
+                            style={
+                                'height': '100%',
+                                'overflow': 'auto',
+                                'border': '1px solid #ddd',
+                                'borderRadius': '5px',
+                                'padding': '10px',
+                                'backgroundColor': '#f8f9fa',
+                                'flexGrow': 1,
+                                'minHeight': 0
+                            }
+                        ),
+                        html.Div([
+                            dbc.Button('Update count', id='button_update_count', n_clicks=0, style={'background': 'seagreen', 'width': '100%'})
+                        ], style={'marginTop': '10px'})
+                    ], style={'display': 'flex', 'flexDirection': 'column', 'height': '100%'})
                 ], width = 6
-            ),
-            dbc.Col([
-                html.Div(
-                    id='slider-container',
-                    style={
-                        'height': '600px',
-                        'overflow': 'auto',
-                        'border': '1px solid #ddd',
-                        'borderRadius': '5px',
-                        'padding': '10px',
-                        'backgroundColor': '#f8f9fa'
-                    }
-                )
-            ], width = 6
-            ),
+                ),
+            ], style={'display': 'flex', 'height': '600px', 'gap': '15px', 'width': '100%'})
         ]),
     ),
 
@@ -437,45 +458,53 @@ def progress_classes_update_separate(n):
     Output('button_display_classes_nclicks', 'data'),
     Output('button_update_classes_nclicks', 'data'),
     Input('button_update_classes', 'n_clicks'),
-    Input('slider-container', 'children'),
-    Input({'type': 'dynamic-slider', 'index': dash.ALL}, 'value'),
+    Input('button_update_count', 'n_clicks'),
+    State('slider-container', 'children'),
+    State({'type': 'dynamic-slider', 'index': dash.ALL}, 'value'),
     State('dropdown_project', 'value'),
     State('checklist_batches', 'value'),
     State('button_display_classes_nclicks', 'data'),
     State('button_update_classes_nclicks', 'data')
 )
-def update_classes_list(button_clicks, slide_container, slider_values, project_name, checklist_value, prev_nclicks, prev_button_clicks):
+def update_classes_list(button_update_classes_clicks, button_update_count_clicks, slide_container, slider_values, project_name, checklist_value, prev_nclicks, prev_button_clicks):
+    import dash
     global current_classes_list, previous_slider_values, loadbar_classes
     components = []
     
     print("=== update_classes_list called ===")
-    print(f"button_clicks: {button_clicks}")
+    print(f"button_update_classes_clicks: {button_update_classes_clicks}")
+    print(f"button_update_count_clicks: {button_update_count_clicks}")
     print(f"checklist_value: {checklist_value}")
     print(f"slider_values: {slider_values}")
     print(f"project_name: {project_name}")
     
-    # Check if triggered by button click
-    button_triggered = button_clicks and button_clicks > prev_button_clicks
+    ctx = dash.callback_context
+    button_triggered = False
+    if ctx.triggered:
+        trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        if trigger_id == 'button_update_classes' and button_update_classes_clicks and button_update_classes_clicks > prev_button_clicks:
+            button_triggered = True
+        elif trigger_id == 'button_update_count' and button_update_count_clicks and button_update_count_clicks > 0:
+            button_triggered = True
     
-    # Check if triggered by slider change
-    slider_triggered = any(value is not None for value in slider_values) if slider_values else False
-    
-    print(f"button_triggered: {button_triggered}")
-    print(f"slider_triggered: {slider_triggered}")
-    
-    # Detect which slider changed (if any)
-    changed_slider_index = None
-    if slider_triggered and slider_values and previous_slider_values:
-        for i, (current, previous) in enumerate(zip(slider_values, previous_slider_values)):
-            if current != previous:
-                changed_slider_index = i
-                print(f"Slider {i} changed from {previous} to {current}")
-                break
-    
-    if button_triggered or slider_triggered:
+    if button_triggered:
         batches_folder = join(getcwd(), 'main', 'assets', project_name, 'dataframes')
+
+        # Check for 'manual_conf' column in each selected batch CSV when button is pressed
+        if checklist_value:
+            for batch_file in checklist_value:
+                file_path = join(batches_folder, batch_file)
+                try:
+                    df = pd.read_csv(file_path, nrows=1)
+                    if 'manual_conf' not in df.columns:
+                        print(f"'manual_conf' column missing in {batch_file}, updating...")
+                        df = update_csv_file(file_path)
+                        print(df.head())
+                except Exception as e:
+                    print(f"Error reading {batch_file}: {e}")
+
         classes_list = get_classes(batches_folder, checklist_value)
-        get_classes_per_batch(batches_folder, checklist_value, classes_list, slider_values, changed_slider_index)
+        get_classes_per_batch(batches_folder, checklist_value, classes_list, slider_values, None)
         classes_text, classes_list = update_classes_project(checklist_value, project_name)
         
         # Generate histogram data
@@ -591,9 +620,13 @@ def update_classes_list(button_clicks, slide_container, slider_values, project_n
 
         loadbar_classes = 100
 
-        return components, prev_nclicks + 1 if button_triggered else prev_nclicks, button_clicks
+        # Update nclicks for the triggering button
+        if trigger_id == 'button_update_classes':
+            return components, prev_nclicks, button_update_classes_clicks
+        else:
+            return components, prev_nclicks + 1, prev_button_clicks
     
-    return components, prev_nclicks, button_clicks
+    return components, prev_nclicks, prev_button_clicks
 
 @app.callback(
     Output('checklist_batches', 'options'),
