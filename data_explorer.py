@@ -8,7 +8,7 @@ import plotly.express as px
 
 import webbrowser
 import pandas as pd
-from os import listdir, getcwd, mkdir
+from os import listdir, getcwd, mkdir, makedirs
 from os.path import join, isdir, exists
 from shutil import copy2
 from update_conf import update_csv_file
@@ -300,6 +300,8 @@ def save_dataset(output_folder, project_name, selected_classes, selected_batches
 
 def get_datasets_list():
     default_output_folder = join(getcwd(), 'output')
+    if not exists(default_output_folder):
+        makedirs(default_output_folder, exist_ok=True)
     datasets_list = [f for f in listdir(default_output_folder) if isdir(join(default_output_folder, f))]
     return datasets_list
 
