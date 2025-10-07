@@ -829,6 +829,22 @@ def scatter_plot_image_selector(
             _image_teste_preds3 = ordered_df['preds3'] 
             _image_teste_confs3 = ordered_df['confs3']
 
+        _image_attributes = [""] * ordered_df.shape[0]
+
+        if i_dropdown_order_images_value in map_columns_vals.values():
+            key = [k for k, v in map_columns_vals.items() if v == i_dropdown_order_images_value][0]
+            print("AAA", key)
+            _image_attributes = ordered_df[key].tolist()
+
+        if 'preds1' in ordered_df.columns:
+            _image_teste_preds1 = ordered_df['preds1'] 
+            _image_teste_confs1 = ordered_df['confs1']
+        if 'preds2' in ordered_df.columns:
+            _image_teste_preds2 = ordered_df['preds2'] 
+            _image_teste_confs2 = ordered_df['confs2']
+            _image_teste_preds3 = ordered_df['preds3'] 
+            _image_teste_confs3 = ordered_df['confs3']
+
         _image_teste_list_caption = ordered_df['manual_label']
         _image_teste_list_custom_data = ordered_df['custom_data']
         if 'preds1' not in ordered_df.columns:
