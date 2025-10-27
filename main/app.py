@@ -21,12 +21,19 @@ import imageselector
 import json
 import ast
 
+import os
 from os import mkdir, getcwd, listdir
 from os.path import exists, join, dirname, basename
 import shutil
 import webbrowser
 from timeit import default_timer as timer
 from datetime import date
+
+def get_project_name(path_to_images):
+    normalized_path = os.path.normpath(path_to_images)
+    project_name = normalized_path.split(os.sep)[1]
+
+    return project_name
 
 def init(argv):
     """
@@ -50,7 +57,7 @@ def init(argv):
     print('thumbnails:', path_to_thumbnails)
     print('csv:', csv_file)
 
-    project_name = path_to_images.split('/')[1]
+    project_name = get_project_name(path_to_images)
     
     csv_folder = dirname(csv_file)
     csv_basename = basename(csv_file)

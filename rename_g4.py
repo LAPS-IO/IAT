@@ -2,9 +2,8 @@ from os import listdir, rename
 from os.path import join,  isfile, exists
 
 project_name = 'lroot_g4'
-path = 'main/assets'
 
-project_path = join(path, project_name)
+project_path = join('main', 'assets', project_name)
 if exists(project_path):
     dataframes_path = join(project_path, 'dataframes')
     dataframes = [f for f in listdir(dataframes_path) if f[:5] == 'batch']

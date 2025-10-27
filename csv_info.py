@@ -28,8 +28,7 @@ def create_table(path_to_project):
 
     return df
 
-assets_path = 'main/assets/'
-df = create_table(join(assets_path, 'lroot'))
+df = create_table(join('main', 'assets', 'lroot'))
 
 app = dash.Dash(__name__,
                 external_stylesheets=[dbc.themes.BOOTSTRAP],

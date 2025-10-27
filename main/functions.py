@@ -80,7 +80,7 @@ def create_list_dics(
 
 
 def f_figure_scatter_plot(_df, _columns, _selected_custom_data, prev_fig = None, order_by = 'A-Z, a-z', 
-                          background_img = 'main/assets/temp.png', xrange = [-80,80], yrange=[-80,80], opacity_changed = False, opacity=0, marker_size = 10):
+                          background_img = join('main', 'assets', 'temp.png'), xrange = [-80,80], yrange=[-80,80], opacity_changed = False, opacity=0, marker_size = 10):
     #start = timer()
 
     l_data = []
@@ -187,7 +187,7 @@ def f_figure_scatter_plot(_df, _columns, _selected_custom_data, prev_fig = None,
 #    draw_time = timer()
 
     if prev_fig is None or opacity_changed:
-        if opacity > 0:
+        if opacity > 0 and background_img is not None:
             fig.add_layout_image(
             dict(
                 source=Image.open(background_img),
@@ -391,7 +391,7 @@ def get_image(path, paint = False, color = (1, 1, 1), zoom=0.2, dim = 255):
     return OffsetImage(img, zoom=zoom)
 
 def map_of_images(df, fig_scatter, path_to_images):
-    output_path = 'main/assets/temp.png'
+    output_path = join('main', 'assets', 'temp.png')
 
     fig_scatter = go.Figure(fig_scatter)
     fig_layout = fig_scatter.layout
@@ -403,7 +403,7 @@ def map_of_images(df, fig_scatter, path_to_images):
     x = df_filtered['x']
     y = df_filtered['y']
     names = df_filtered['names']
-    paths = ['main/' + path_to_images + n for n in names]
+    paths = [join('main', path_to_images, n) for n in names]
     zoom = 12/(xrange[1]-xrange[0])
 
     f = plt.figure(figsize=(24,24), frameon=False)
