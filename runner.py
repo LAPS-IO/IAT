@@ -38,10 +38,10 @@ projects_path = 'main/assets/'
 
 project_name = sys.argv[1]
 
-dataframes_path = 'main/assets/' + project_name + '/dataframes/'
-samples_path = 'main/assets/' + project_name + '/samples/'
-images_path = 'assets/' + project_name + '/images/'
-thumbnails_path = 'assets/' + project_name + '/thumbnails/'
+dataframes_path = join('main', 'assets', project_name, 'dataframes')
+samples_path = join('main', 'assets', project_name, 'samples')
+images_path = join('assets', project_name, 'images')
+thumbnails_path = join('assets', project_name, 'thumbnails')
 batches_path = join('main', images_path)
 
 num_batches = len(listdir(batches_path))
@@ -56,6 +56,6 @@ batch_id = int(text)
 
 path_to_images = join(images_path, map_id_to_batch[batch_id], 'samples/')
 path_to_thumbnails = join(thumbnails_path, map_id_to_batch[batch_id], 'samples/')
-path_to_csv = dataframes_path + map_id_to_batch[batch_id] +  '_' + project_name + '.csv'
+path_to_csv = join(dataframes_path, map_id_to_batch[batch_id] +  '_' + project_name + '.csv')
 
 system('python main/app.py ' + path_to_images + ' ' + path_to_thumbnails + ' ' + path_to_csv + ' 100')

@@ -63,6 +63,7 @@ def init(argv):
     csv_basename = basename(csv_file)
     batch_str = csv_basename[:-4]
     background_base = join('main', 'assets', project_name, 'backgrounds')
+
     background_str = [folder for folder in listdir(background_base) if folder[:-4] == batch_str][0]
     
     background_path = join(background_base, background_str)
