@@ -34,8 +34,6 @@ def check_input(text, max_num):
     except:
         print('Batch size should be an integer between 1 and', max_num)
 
-projects_path = 'main/assets/'
-
 project_name = sys.argv[1]
 
 dataframes_path = join('main', 'assets', project_name, 'dataframes')
@@ -54,8 +52,8 @@ while not check_input(text, num_batches):
     text = input('\nChoose batch for labeling: ')
 batch_id = int(text)
 
-path_to_images = join(images_path, map_id_to_batch[batch_id], 'samples/')
-path_to_thumbnails = join(thumbnails_path, map_id_to_batch[batch_id], 'samples/')
+path_to_images = join(images_path, map_id_to_batch[batch_id], 'samples')
+path_to_thumbnails = join(thumbnails_path, map_id_to_batch[batch_id], 'samples')
 path_to_csv = join(dataframes_path, map_id_to_batch[batch_id] +  '_' + project_name + '.csv')
 
 system('python main/app.py ' + path_to_images + ' ' + path_to_thumbnails + ' ' + path_to_csv + ' 100')

@@ -89,42 +89,43 @@ def init_appearance():
     background_color = 'rgba(255, 250, 240, 100)'
     return background_color
 
-path_to_images, path_to_thumbnails, csv_file, csv_folder, csv_basename, background_path, user_id, port, graph_range = init(sys.argv)
-df = read_input_csv(csv_file)
-thumbs_jpg = False
+# Initialize variables (will be stored in dcc.Store components)
+_path_to_images, _path_to_thumbnails, _csv_file, _csv_folder, _csv_basename, _background_path, _user_id, _port, _graph_range = init(sys.argv)
+df = read_input_csv(_csv_file)
+_thumbs_jpg = False
 if 'thumbnails' in df.columns:
-    thumbs_jpg = True 
+    _thumbs_jpg = True 
 
-widths, heights = compute_img_ratios(path_to_images, df['names'])
-df['widths'] = widths
-df['heights'] = heights
+_widths, _heights = compute_img_ratios(_path_to_images, df['names'])
+df['widths'] = _widths
+df['heights'] = _heights
 
-background_ranges = {'x': [-graph_range, graph_range], 'y': [-graph_range, graph_range]}
+_background_ranges = {'x': [-_graph_range, _graph_range], 'y': [-_graph_range, _graph_range]}
 
-init_par_coords = False #used for recomputing the intervals of the parcoords
 
-THUMBNAIL_WIDTH = 28
-THUMBNAIL_HEIGHT = 28
-background_color = init_appearance()
+_THUMBNAIL_WIDTH = 28
+_THUMBNAIL_HEIGHT = 28
+_background_color = init_appearance()
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP],
                 meta_tags=[{'name': 'viewport',
                             'content': 'width=device-width, initial-scale=1.0'}]
                 )
-labels_buffer = None
-colors_buffer = None
+_labels_buffer = None
+_colors_buffer = None
 
-labels_list = df['manual_label'].tolist()
-colors_list = df['colors'].tolist()
+_labels_list = df['manual_label'].tolist()
+_colors_list = df['colors'].tolist()
 
-labels_colors = {}
-for i in range(len(labels_list)):
-    labels_colors[labels_list[i]] = colors_list[i]
-next_label_id = df['colors'].max()+1
+_labels_colors = {}
+for i in range(len(_labels_list)):
+    _labels_colors[_labels_list[i]] = _colors_list[i]
+_next_label_id = df['colors'].max()+1
 
 #############################################################################
 
-header = html.H1('Image Labeling Tool - ' + csv_basename[:-4], style={'color': 'CornflowerBlue'})
+# Header will be created dynamically using store value
+header = html.H1('Image Labeling Tool', style={'color': 'CornflowerBlue'}, id='header_title')
 
 #button_group_1 = dbc.ButtonGroup(
 #    [
@@ -149,7 +150,7 @@ button_group_2 = dbc.ButtonGroup(
 
 button_group_3 = dbc.ButtonGroup(
     [
-        dbc.Input(value=csv_basename, id='input_save_csv', type="text", style={'width': '50%', 'background':'Floralwhite'}),
+        dbc.Input(value="", id='input_save_csv', type="text", style={'width': '50%', 'background':'Floralwhite'}),
         dbc.Button("Save CSV",n_clicks=0, id='button_save_csv', style={'background':'chocolate', 'width':'50%'}),
     ],
     #vertical=True,
@@ -231,27 +232,9 @@ IMAGES = create_list_dics(
 #    _list_tags='')
 
 #fig = f_figure_scatter_plot(df, _columns=['x', 'y'], _selected_custom_data=list(df['custom_data']))
-fig = f_figure_scatter_plot(df, _columns=['x', 'y'], _selected_custom_data=[], background_img=background_path,
-                            xrange = background_ranges['x'], yrange=background_ranges['y'])
+fig = f_figure_scatter_plot(df, _columns=['x', 'y'], _selected_custom_data=[], background_img=_background_path,
+                            xrange = _background_ranges['x'], yrange=_background_ranges['y'])
 
-#_columns_paralelas_coordenadas = ['Layer_A', 'Layer_B', 'Layer_C', 'Layer_D', 'Layer_E', 'Layer_F', 'Layer_G']
-#if df.shape[1] < 30: #v0.2
-if 'D2' in df:
-    _columns_paralelas_coordenadas = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7']
-else:
-    _columns_paralelas_coordenadas = ['D1', 'x2', 'y2', 'D4', 'x3', 'y3', 'D7']
-#else: #v0.3
-#    _columns_paralelas_coordenadas = ['D1', 'D4', 'D7', 'Area (pxl)', 'circularity', 'Elongation', 'Mean Intensity']
-
-
-fig_paral =  f_figure_paralelas_coordenadas(
-                        _df=df,
-                        _filtered_df=pd.DataFrame(columns=df.columns),
-                        _columns=_columns_paralelas_coordenadas,
-                        #_selected_custom_data=list(df['custom_data']),
-                        _selected_custom_data=[],
-                        _fig = None
-                    )
 
 ##############################################################################################################
 
@@ -387,7 +370,7 @@ app.layout = html.Div([
                     dbc.Row(
                         html.Div(imageselector.ImageSelector(id='g_image_selector', images=IMAGES,
                             galleryHeaderStyle = {'position': 'sticky', 'top': 0, 'height': '0px', 'background': "#000000", 'zIndex': -1},),
-                            id='XXXXXXXXXX', style=dict(height='63vh',overflow='scroll', backgroundColor=background_color)
+                            id='XXXXXXXXXX', style=dict(height='63vh',overflow='scroll', backgroundColor=_background_color)
                             )
                         ),
 
@@ -396,17 +379,6 @@ app.layout = html.Div([
             ]),
         style={'max-width': '100%'},
         # className='mt-2'
-    ),
-
-    dbc.Row([dbc.Col(html.Hr()),],),
-    
-    dbc.Container(
-        dbc.Row(
-            [
-                dbc.Col(dcc.Graph(id="g_coordenadas_paralelas", figure=fig_paral, style={"height": "70vh"}, config={'displayModeBar': False}), style=dict(width='100%',overflow='scroll'), width={"size": 12}),
-            ]
-        ),
-        style={'max-width': '100%'},
     ),
 
     dbc.Row([dbc.Col(html.Hr()),],),
@@ -425,18 +397,39 @@ app.layout = html.Div([
     #dcc.Store(id='selected_custom_points', data=json.dumps(list(df['custom_data']))),
     dcc.Store(id='selected_custom_points', data=json.dumps([])),
     dcc.Store(id='unchecked_points', data=json.dumps([])),
-    dcc.Store(id='chart_flag', data=0),
     dcc.Store(id='state_store_df', data=df.to_json()),
     dcc.Store(id='dummy_csv_save', data=0),
     dcc.Store(id='dummy_finish_work', data=0),
     dcc.Store(id='dummy_map_images', data=0),
+    # Global variables stores
+    dcc.Store(id='store_path_to_images', data=_path_to_images),
+    dcc.Store(id='store_path_to_thumbnails', data=_path_to_thumbnails),
+    dcc.Store(id='store_csv_file', data=_csv_file),
+    dcc.Store(id='store_csv_folder', data=_csv_folder),
+    dcc.Store(id='store_csv_basename', data=_csv_basename),
+    dcc.Store(id='store_background_path', data=_background_path),
+    dcc.Store(id='store_user_id', data=_user_id),
+    dcc.Store(id='store_port', data=_port),
+    dcc.Store(id='store_graph_range', data=_graph_range),
+    dcc.Store(id='store_thumbs_jpg', data=_thumbs_jpg),
+    dcc.Store(id='store_widths', data=json.dumps(_widths.tolist() if hasattr(_widths, 'tolist') else _widths)),
+    dcc.Store(id='store_heights', data=json.dumps(_heights.tolist() if hasattr(_heights, 'tolist') else _heights)),
+    dcc.Store(id='store_background_ranges', data=json.dumps(_background_ranges)),
+    dcc.Store(id='store_thumbnail_width', data=_THUMBNAIL_WIDTH),
+    dcc.Store(id='store_thumbnail_height', data=_THUMBNAIL_HEIGHT),
+    dcc.Store(id='store_background_color', data=_background_color),
+    dcc.Store(id='store_labels_buffer', data=json.dumps(_labels_buffer) if _labels_buffer is not None else None),
+    dcc.Store(id='store_colors_buffer', data=json.dumps(_colors_buffer.tolist() if _colors_buffer is not None and hasattr(_colors_buffer, 'tolist') else _colors_buffer) if _colors_buffer is not None else None),
+    dcc.Store(id='store_labels_list', data=json.dumps(_labels_list)),
+    dcc.Store(id='store_colors_list', data=json.dumps(_colors_list.tolist() if hasattr(_colors_list, 'tolist') else _colors_list)),
+    dcc.Store(id='store_labels_colors', data=json.dumps(_labels_colors)),
+    dcc.Store(id='store_next_label_id', data=_next_label_id),
     html.Div(id='output')
 ]) #End html.DIV
 
 ############3
 
-def save_csv(df_updated, csv_name):
-    global csv_folder
+def save_csv(df_updated, csv_name, csv_folder):
     filename = join(csv_folder, csv_name)
     df_updated.to_csv(filename, index=False)
     
@@ -459,12 +452,14 @@ def save_csv(df_updated, csv_name):
     [
         State('state_store_df', 'data'),
         State("input_finish_work", "value"),
+        State('store_path_to_images', 'data'),
     ]
     )
 def save_dataset(
     i_button_save_csv_nclicks,
     s_store_df,
-    s_input_finish_work_value
+    s_input_finish_work_value,
+    s_store_path_to_images
     ):
 
     if i_button_save_csv_nclicks > 0:
@@ -481,7 +476,9 @@ def save_dataset(
         for index, row in df_updated.iterrows():
             name = row['names']
             folder = row['manual_label']
-            shutil.copy2('main/' + path_to_images + name, join(s_input_finish_work_value, folder))
+            source_path = join('main', s_store_path_to_images, name)
+            dest_path = join(s_input_finish_work_value, folder, name)
+            shutil.copy2(source_path, dest_path)
 
         print('\nDataset recorded.\n')
     
@@ -497,20 +494,40 @@ def save_dataset(
     [
         State('state_store_df', 'data'),
         State("input_save_csv", "value"),
+        State('store_csv_folder', 'data'),
     ]
     )
 def button_save_csv(
     i_button_save_csv_nclicks,
     s_store_df,
-    s_input_save_csv_value
+    s_input_save_csv_value,
+    s_store_csv_folder
     ):
 
     if i_button_save_csv_nclicks > 0:
         df_updated = pd.read_json(s_store_df)
 
-        save_csv(df_updated, str(s_input_save_csv_value))
+        save_csv(df_updated, str(s_input_save_csv_value), s_store_csv_folder)
     
     return [0]
+
+@app.callback(
+    [
+        Output('header_title', 'children'),
+        Output('input_save_csv', 'value'),
+    ],
+    [
+        Input('store_csv_basename', 'data'),
+    ]
+    )
+def initialize_ui_elements(s_store_csv_basename):
+    if s_store_csv_basename:
+        header_text = 'Image Labeling Tool - ' + s_store_csv_basename[:-4]
+        csv_basename = s_store_csv_basename
+    else:
+        header_text = 'Image Labeling Tool'
+        csv_basename = ""
+    return [header_text, csv_basename]
 
 # @app.callback(
 #     [
@@ -545,12 +562,15 @@ def button_save_csv(
     [
         Output('selected_custom_points', 'data'),
         Output('state_store_df', 'data'),
-        Output('chart_flag', 'data'),
         Output('unchecked_points', 'data'),
+        Output('store_labels_list', 'data'),
+        Output('store_labels_colors', 'data'),
+        Output('store_next_label_id', 'data'),
+        Output('store_labels_buffer', 'data'),
+        Output('store_colors_buffer', 'data'),
     ],
     [
         Input('g_scatter_plot', 'selectedData'),
-        Input('g_coordenadas_paralelas', 'restyleData'),
         #Input('button_galeria_filtrar', 'n_clicks'),
         #Input('button_galeria_excluir', 'n_clicks'),
         Input('button_aplicar_novo_label', 'n_clicks'),
@@ -561,17 +581,21 @@ def button_save_csv(
         State('selected_custom_points', 'data'),
         State('unchecked_points', 'data'),
         State('state_store_df', 'data'),
-        State('g_coordenadas_paralelas', 'figure'),
         State('g_image_selector', 'images'),
         State('input_aplicar_novo_label', 'value'),
         State('check_save_csv', 'value'),
         State('input_save_csv', 'value'),
-        State('check_discard_marked', 'value')
+        State('check_discard_marked', 'value'),
+        State('store_labels_list', 'data'),
+        State('store_labels_colors', 'data'),
+        State('store_next_label_id', 'data'),
+        State('store_labels_buffer', 'data'),
+        State('store_colors_buffer', 'data'),
+        State('store_csv_folder', 'data'),
     ]
     )
 def mudanca_custom_data(
     i_selection_g_scatter_plot,
-    i_g_coordenadas_paralelas_restyleData,
     #i_button_galeria_filtrar_nclicks,
     #i_button_galeria_excluir_nclicks,
     i_button_aplicar_novo_label_nclicks,
@@ -580,27 +604,33 @@ def mudanca_custom_data(
     s_selected_custom_points,
     s_unchecked_points,
     s_store_df,
-    s_g_coordenadas_paralelas_figure,
     s_button_galeria_filtrar_images,
     s_input_aplicar_novo_label_value,
     s_check_save_csv_value,
     s_input_save_csv_value,
-    s_check_discard_marked_value
+    s_check_discard_marked_value,
+    s_store_labels_list,
+    s_store_labels_colors,
+    s_store_next_label_id,
+    s_store_labels_buffer,
+    s_store_colors_buffer,
+    s_store_csv_folder
     ):
 
     #print('app.py entrou no mudanca_custom_data')
     
-    global labels_list
-    global labels_colors
-    global next_label_id
-    global labels_buffer # for the undo
-    global colors_buffer # for the undo
-    global init_par_coords
+    # Load from stores
+    labels_list = json.loads(s_store_labels_list) if s_store_labels_list else []
+    labels_colors = json.loads(s_store_labels_colors) if s_store_labels_colors else {}
+    next_label_id = s_store_next_label_id if s_store_next_label_id is not None else 0
+    labels_buffer = json.loads(s_store_labels_buffer) if s_store_labels_buffer else None
+    if s_store_colors_buffer:
+        colors_buffer_data = json.loads(s_store_colors_buffer)
+        colors_buffer = pd.Series(colors_buffer_data) if isinstance(colors_buffer_data, list) else colors_buffer_data
+    else:
+        colors_buffer = None
 
     print("Mudanca custom data")
-
-    init_par_coords = False
-    set_chart_flag = 0
     df_updated = pd.read_json(s_store_df)
     ctx = dash.callback_context
     flag_callback = ctx.triggered[0]['prop_id'].split('.')[0]
@@ -611,40 +641,12 @@ def mudanca_custom_data(
 
     if flag_callback == 'g_scatter_plot':
         #print('app.py entrou na callback do g_scatter_plot')
-        set_chart_flag = 0
         if i_selection_g_scatter_plot and i_selection_g_scatter_plot['points']:
             selectedpoints = [d['customdata'] for d in i_selection_g_scatter_plot['points']]
             selectedpoints = json.dumps(selectedpoints)
         else:
             #selectedpoints = json.dumps(list(df_updated['custom_data']))
             selectedpoints = json.dumps([])
-        init_par_coords = True
-
-    elif flag_callback == 'g_coordenadas_paralelas':
-        #print('app.py entrou na callback g_coordenadas_paralelas')
-        set_chart_flag = 1
-        selectedpoints = [d['customdata'] for d in i_selection_g_scatter_plot['points']]
-
-        filtered_df = df_updated[df_updated['custom_data'].isin(selectedpoints)]
-        
-        if i_g_coordenadas_paralelas_restyleData is not None:
-            selected_and_checked = update_df_paralelas_coord(
-                _df =filtered_df,
-                _list_columns =_columns_paralelas_coordenadas,
-                _figure = s_g_coordenadas_paralelas_figure,
-                _new_dim_vals=i_g_coordenadas_paralelas_restyleData
-            )
-
-            for point in s_button_galeria_filtrar_images:
-                if point['custom_data'] not in selected_and_checked:
-                    unchecked_points.append(point['custom_data'])
-            if i_selection_g_scatter_plot:
-                selectedpoints = [d['customdata'] for d in i_selection_g_scatter_plot['points']]
-            else:
-                selectedpoints = []
-            selectedpoints = json.dumps(selectedpoints)
-        else:
-            selectedpoints = json.dumps(list(df_updated['custom_data']))
   
     elif flag_callback == 'button_aplicar_novo_label':
         s_selected_custom_points = ast.literal_eval(s_selected_custom_points)
@@ -656,7 +658,7 @@ def mudanca_custom_data(
             else:
                 selected_not_checked.append(point['custom_data'])
         new_label = str(s_input_aplicar_novo_label_value)
-        labels_buffer = df_updated['manual_label'].copy() # for the undo
+        labels_buffer = df_updated['manual_label'].copy().tolist() # for the undo
         colors_buffer = df_updated['colors'].copy()  # for the undo
         df_updated['manual_label'][df_updated['custom_data'].isin(selected_and_checked)]= new_label
         if new_label not in labels_list:
@@ -666,7 +668,7 @@ def mudanca_custom_data(
         df_updated['colors'][df_updated['custom_data'].isin(selected_and_checked)] = labels_colors[new_label]
         
         if s_check_save_csv_value == [' Save CSV after labeling']:
-            save_csv(df_updated, str(s_input_save_csv_value))
+            save_csv(df_updated, str(s_input_save_csv_value), s_store_csv_folder)
         
         df_store_updated = df_updated.to_json()
         
@@ -674,8 +676,10 @@ def mudanca_custom_data(
             selectedpoints = json.dumps(selected_not_checked)
             
     elif flag_callback == 'button_undo':
-        df_updated['manual_label'] = labels_buffer
-        df_updated['colors'] = colors_buffer
+        if labels_buffer is not None:
+            df_updated['manual_label'] = pd.Series(labels_buffer) if isinstance(labels_buffer, list) else labels_buffer
+        if colors_buffer is not None:
+            df_updated['colors'] = colors_buffer if isinstance(colors_buffer, pd.Series) else pd.Series(colors_buffer)
         df_store_updated = df_updated.to_json()
         selectedpoints = json.dumps([])
 
@@ -688,19 +692,28 @@ def mudanca_custom_data(
                 unchecked_points.append(point['custom_data'])
         df_store_updated = df_updated.to_json()
     else:
-        set_chart_flag = 0
         #selectedpoints = json.dumps(list(df_updated['custom_data']))
         selectedpoints = json.dumps([])
 
     s_unchecked_points = json.dumps(unchecked_points)
-    return [selectedpoints, df_store_updated, set_chart_flag, s_unchecked_points]
+    
+    # Update stores for modified variables
+    return [
+        selectedpoints, 
+        df_store_updated, 
+        s_unchecked_points,
+        json.dumps(labels_list),
+        json.dumps(labels_colors),
+        next_label_id,
+        json.dumps(labels_buffer) if labels_buffer is not None else None,
+        json.dumps(colors_buffer.tolist() if colors_buffer is not None and hasattr(colors_buffer, 'tolist') else (colors_buffer if colors_buffer is not None else [])) if colors_buffer is not None else None
+    ]
 
 
 @app.callback(
     [
     Output('g_scatter_plot', 'figure'),
     Output('g_image_selector', 'images'),
-    Output('g_coordenadas_paralelas', 'figure'),
     ],
     [
     Input('selected_custom_points', 'data'),
@@ -716,9 +729,14 @@ def mudanca_custom_data(
     [
     State('g_scatter_plot', 'figure'),
     State('g_image_selector', "images"),
-    State('g_coordenadas_paralelas', 'figure'),
     State('state_store_df', 'data'),
-    State('chart_flag', 'data'),
+    State('store_path_to_images', 'data'),
+    State('store_path_to_thumbnails', 'data'),
+    State('store_background_path', 'data'),
+    State('store_widths', 'data'),
+    State('store_heights', 'data'),
+    State('store_thumbs_jpg', 'data'),
+    State('store_background_ranges', 'data'),
     ]
     )
 def scatter_plot_image_selector(
@@ -733,12 +751,24 @@ def scatter_plot_image_selector(
     i_check_discard_relabeled_value,
     s_g_scatter_plot_figure,
     s_g_image_selector_images,
-    s_g_coordenadas_paralelas_figure,
     s_store_df,
-    s_chart_flag_data,
+    s_store_path_to_images,
+    s_store_path_to_thumbnails,
+    s_store_background_path,
+    s_store_widths,
+    s_store_heights,
+    s_store_thumbs_jpg,
+    s_store_background_ranges,
     ):
 
-    global path_to_images, path_to_thumbnails, background_path, widths, heights, thumbs_jpg
+    # Load from stores
+    path_to_images = s_store_path_to_images
+    path_to_thumbnails = s_store_path_to_thumbnails
+    background_path = s_store_background_path
+    widths = json.loads(s_store_widths) if s_store_widths else []
+    heights = json.loads(s_store_heights) if s_store_heights else []
+    thumbs_jpg = s_store_thumbs_jpg
+    background_ranges = json.loads(s_store_background_ranges) if s_store_background_ranges else {'x': [-80, 80], 'y': [-80, 80]}
 
     prev_fig = go.Figure(s_g_scatter_plot_figure)
 
@@ -759,8 +789,6 @@ def scatter_plot_image_selector(
 
         #print('app.py entrou na callback selected_custom_points')
         selected_points = json.loads(i_selected_custom_points)
-        if init_par_coords:
-            init_for_update_pc(selected_points)
 
         fig_scatter = f_figure_scatter_plot(_df, _columns=['x', 'y'], _selected_custom_data=selected_points, prev_fig = prev_fig, order_by=i_dropdown_order_labels_value,
                                             background_img=background_path, opacity_changed = opacity_changed, opacity = i_slider_map_opacity_value,
@@ -879,9 +907,13 @@ def scatter_plot_image_selector(
         #_image_teste_list_caption = updated_df['manual_label'][updated_df['custom_data'].isin(selected_points)]
         #_image_teste_list_custom_data = updated_df['custom_data'][updated_df['custom_data'].isin(selected_points)]
         
+        # Create paths using os.path.join for cross-platform compatibility
+        _image_teste_list_src = [join(path_to_images, name) for name in _image_teste_list_names]
+        _image_teste_list_thumbnail = [join(path_to_thumbnails, thumb) for thumb in _image_teste_list_thumbs]
+        
         fig2 = create_list_dics(
-            _list_src=list(path_to_images + _image_teste_list_names),
-            _list_thumbnail=list(path_to_thumbnails + _image_teste_list_thumbs),
+            _list_src=_image_teste_list_src,
+            _list_thumbnail=_image_teste_list_thumbnail,
             _list_name_figure=list(_image_teste_list_names),
             _list_thumbnailWidth=list(_image_teste_list_widths),
             _list_thumbnailHeight=list(_image_teste_list_heights),
@@ -892,38 +924,19 @@ def scatter_plot_image_selector(
             #_list_tags=[[{'value': "Nature", 'title': "Nature | Flowers"}]] * _image_teste_list_correct_label.shape[0])
             _list_tags=[[]] * _image_teste_list_correct_label.shape[0])
 
-        if s_chart_flag_data == 1:
-            #print('app.py chamando fpc via if')
-            fig3 =  f_figure_paralelas_coordenadas(
-                _df=_df,
-                _filtered_df = filtered_df,
-                _columns=_columns_paralelas_coordenadas,
-                _selected_custom_data=json.loads(i_selected_custom_points),
-                _fig = s_g_coordenadas_paralelas_figure
-            )
-        else:
-            #print('app.py chamando fpc via else')
-            fig3 =  f_figure_paralelas_coordenadas(
-                        _df=_df,
-                        _filtered_df = filtered_df,
-                        _columns=_columns_paralelas_coordenadas,
-                        _selected_custom_data=json.loads(i_selected_custom_points),
-                        _fig = None
-                    )
-
-        return [fig_scatter, fig2, fig3]
+        return [fig_scatter, fig2]
 
     else:
-        return [s_g_scatter_plot_figure, s_g_image_selector_images, s_g_coordenadas_paralelas_figure]
+        return [s_g_scatter_plot_figure, s_g_image_selector_images]
 
 ##############################################################################################################
 
 opened = False
 if not opened:
-    webbrowser.open('http://127.0.0.1:' + str(port) + '/', new=2, autoraise=True)
+    webbrowser.open('http://127.0.0.1:' + str(_port) + '/', new=2, autoraise=True)
     opened = False
 
 if __name__ == '__main__':
     app.title = 'IAT'
-    app.run_server(debug=False, port=port)
+    app.run_server(debug=False, port=_port)
 
